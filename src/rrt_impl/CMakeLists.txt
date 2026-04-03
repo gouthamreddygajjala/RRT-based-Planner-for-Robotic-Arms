@@ -1,0 +1,71 @@
+cmake_minimum_required(VERSION 3.8)
+project(rrt_impl)
+
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+# ================= Dependencies =================
+
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
+
+find_package(pinocchio REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(hpp-fcl REQUIRED)
+
+# ================= Include =================
+
+include_directories(
+  include
+  ${EIGEN3_INCLUDE_DIR}
+)
+
+# ================= Library =================
+
+add_library(rrt_core
+  src/rrt.cpp
+  src/check_collision.cpp
+)
+
+# Link libraries
+target_link_libraries(rrt_core
+  pinocchio::pinocchio
+  hpp-fcl::hpp-fcl
+)
+
+# ROS dependencies
+ament_target_dependencies(rrt_core
+  rclcpp
+  geometry_msgs
+  nav_msgs
+  std_msgs
+  visualization_msgs
+)
+
+# ================= Install =================
+
+install(
+  DIRECTORY include/
+  DESTINATION include/
+)
+
+install(
+  TARGETS rrt_core
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# ================= Testing =================
+
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  set(ament_cmake_copyright_FOUND TRUE)
+  set(ament_cmake_cpplint_FOUND TRUE)
+  ament_lint_auto_find_test_dependencies()
+endif()
+
+ament_package()

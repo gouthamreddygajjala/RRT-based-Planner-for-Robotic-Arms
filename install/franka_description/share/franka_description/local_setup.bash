@@ -1,0 +1,1 @@
+/home/gautam/Music/my_ws/rrt_planning/build/franka_description/ament_cmake_environment_hooks/local_setup.bash

@@ -1,0 +1,2 @@
+source;share/rrt_impl/environment/ament_prefix_path.sh
+source;share/rrt_impl/environment/path.sh

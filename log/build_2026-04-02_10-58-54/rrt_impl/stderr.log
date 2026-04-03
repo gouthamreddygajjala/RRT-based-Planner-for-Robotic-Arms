@@ -1,0 +1,69 @@
+In file included from [01m[K/opt/openrobots/include/hpp/fcl/config.hh:1[m[K,
+                 from [01m[K/opt/openrobots/include/pinocchio/serialization/eigen.hpp:20[m[K,
+                 from [01m[K/opt/openrobots/include/pinocchio/serialization/fwd.hpp:11[m[K,
+                 from [01m[K/opt/openrobots/include/pinocchio/multibody/joint/joint-composite.hpp:14[m[K,
+                 from [01m[K/opt/openrobots/include/pinocchio/multibody/joint/joint-generic.hpp:9[m[K,
+                 from [01m[K/opt/openrobots/include/pinocchio/multibody/model.hpp:17[m[K,
+                 from [01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/include/rrt_impl/check_collision.hpp:8[m[K,
+                 from [01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/check_collision.cpp:1[m[K:
+[01m[K/opt/openrobots/include/hpp/fcl/coal.hpp:12:99:[m[K [01;36m[Knote: [m[K‘[01m[K#pragma message: Please update your includes from 'hpp/fcl' to 'coal' or define COAL_DISABLE_HPP_FCL_WARNINGS[m[K’
+   12 |     "Please update your includes from 'hpp/fcl' to 'coal' or define COAL_DISABLE_HPP_FCL_WARNINGS"[01;36m[K)[m[K
+      |                                                                                                   [01;36m[K^[m[K
+In file included from [01m[K/opt/openrobots/include/hpp/fcl/config.hh:1[m[K,
+                 from [01m[K/opt/openrobots/include/pinocchio/serialization/eigen.hpp:20[m[K,
+                 from [01m[K/opt/openrobots/include/pinocchio/serialization/fwd.hpp:11[m[K,
+                 from [01m[K/opt/openrobots/include/pinocchio/multibody/joint/joint-composite.hpp:14[m[K,
+                 from [01m[K/opt/openrobots/include/pinocchio/multibody/joint/joint-generic.hpp:9[m[K,
+                 from [01m[K/opt/openrobots/include/pinocchio/multibody/model.hpp:17[m[K,
+                 from [01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/include/rrt_impl/check_collision.hpp:8[m[K,
+                 from [01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/include/rrt_impl/rrt.hpp:11[m[K,
+                 from [01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/rrt.cpp:1[m[K:
+[01m[K/opt/openrobots/include/hpp/fcl/coal.hpp:12:99:[m[K [01;36m[Knote: [m[K‘[01m[K#pragma message: Please update your includes from 'hpp/fcl' to 'coal' or define COAL_DISABLE_HPP_FCL_WARNINGS[m[K’
+   12 |     "Please update your includes from 'hpp/fcl' to 'coal' or define COAL_DISABLE_HPP_FCL_WARNINGS"[01;36m[K)[m[K
+      |                                                                                                   [01;36m[K^[m[K
+[01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/check_collision.cpp:[m[K In member function ‘[01m[Kbool collision::CheckCollision::isStateValid(const std::vector<double>&) const[m[K’:
+[01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/check_collision.cpp:62:18:[m[K [01;31m[Kerror: [m[Kno matching function for call to ‘[01m[Kpinocchio::ComputeCollision::ComputeCollision(const pinocchio::GeometryModel&, pinocchio::GeometryData&, size_t&)[m[K’
+   62 |                 i[01;31m[K)[m[K;
+      |                  [01;31m[K^[m[K
+In file included from [01m[K/opt/openrobots/include/pinocchio/multibody/geometry.hpp:8[m[K,
+                 from [01m[K/opt/openrobots/include/pinocchio/algorithm/model.hpp:9[m[K,
+                 from [01m[K/opt/openrobots/include/pinocchio/multibody/model.hxx:11[m[K,
+                 from [01m[K/opt/openrobots/include/pinocchio/multibody/model.hpp:533[m[K,
+                 from [01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/include/rrt_impl/check_collision.hpp:8[m[K,
+                 from [01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/check_collision.cpp:1[m[K:
+[01m[K/opt/openrobots/include/pinocchio/multibody/geometry-object.hpp:385:5:[m[K [01;36m[Knote: [m[Kcandidate: ‘[01m[Kpinocchio::ComputeCollision::ComputeCollision(const pinocchio::GeometryObject&, const pinocchio::GeometryObject&)[m[K’
+  385 |     [01;36m[KComputeCollision[m[K(const GeometryObject & go1, const GeometryObject & go2)
+      |     [01;36m[K^~~~~~~~~~~~~~~~[m[K
+[01m[K/opt/openrobots/include/pinocchio/multibody/geometry-object.hpp:385:5:[m[K [01;36m[Knote: [m[K  candidate expects 2 arguments, 3 provided
+[01m[K/opt/openrobots/include/pinocchio/multibody/geometry-object.hpp:381:10:[m[K [01;36m[Knote: [m[Kcandidate: ‘[01m[Kpinocchio::ComputeCollision::ComputeCollision(const pinocchio::ComputeCollision&)[m[K’
+  381 |   struct [01;36m[KComputeCollision[m[K : ::hpp::fcl::ComputeCollision
+      |          [01;36m[K^~~~~~~~~~~~~~~~[m[K
+[01m[K/opt/openrobots/include/pinocchio/multibody/geometry-object.hpp:381:10:[m[K [01;36m[Knote: [m[K  candidate expects 1 argument, 3 provided
+[01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/check_collision.cpp:56:25:[m[K [01;35m[Kwarning: [m[Kunused variable ‘[01m[Kpair[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-variable-Wunused-variable]8;;[m[K]
+   56 |             const auto &[01;35m[Kpair[m[K = geom_model_.collisionPairs[i];
+      |                         [01;35m[K^~~~[m[K
+[01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/rrt.cpp:[m[K In function ‘[01m[Kvoid rrt_core::setStepSize(double)[m[K’:
+[01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/rrt.cpp:39:37:[m[K [01;31m[Kerror: [m[K‘[01m[Kstep_size_[m[K’ was not declared in this scope
+   39 |     void setStepSize(double step) { [01;31m[Kstep_size_[m[K = step; }
+      |                                     [01;31m[K^~~~~~~~~~[m[K
+[01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/rrt.cpp:[m[K In function ‘[01m[Kvoid rrt_core::setGoalBias(double)[m[K’:
+[01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/rrt.cpp:40:37:[m[K [01;31m[Kerror: [m[K‘[01m[Kgoal_bias_[m[K’ was not declared in this scope
+   40 |     void setGoalBias(double bias) { [01;31m[Kgoal_bias_[m[K = bias; }
+      |                                     [01;31m[K^~~~~~~~~~[m[K
+[01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/rrt.cpp:[m[K In function ‘[01m[Kvoid rrt_core::setGoalTolerance(double)[m[K’:
+[01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/rrt.cpp:41:41:[m[K [01;31m[Kerror: [m[K‘[01m[Kgoal_tolerance_[m[K’ was not declared in this scope
+   41 |     void setGoalTolerance(double tol) { [01;31m[Kgoal_tolerance_[m[K = tol; }
+      |                                         [01;31m[K^~~~~~~~~~~~~~~[m[K
+[01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/rrt.cpp:[m[K In function ‘[01m[Kvoid rrt_core::reserve(size_t)[m[K’:
+[01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/rrt.cpp:42:30:[m[K [01;31m[Kerror: [m[K‘[01m[Knodes_[m[K’ was not declared in this scope
+   42 |     void reserve(size_t n) { [01;31m[Knodes_[m[K.reserve(n); }
+      |                              [01;31m[K^~~~~~[m[K
+[01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/rrt.cpp:[m[K In member function ‘[01m[Kbool rrt_core::RRT::isCollisionFree(const std::vector<double>&) const[m[K’:
+[01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/rrt.cpp:252:48:[m[K [01;31m[Kerror: [m[K‘[01m[Kq[m[K’ was not declared in this scope
+  252 |         return collision_checker_.isStateValid([01;31m[Kq[m[K);
+      |                                                [01;31m[K^[m[K
+gmake[2]: *** [CMakeFiles/rrt_core.dir/build.make:76: CMakeFiles/rrt_core.dir/src/rrt.cpp.o] Error 1
+gmake[2]: *** Waiting for unfinished jobs....
+gmake[2]: *** [CMakeFiles/rrt_core.dir/build.make:90: CMakeFiles/rrt_core.dir/src/check_collision.cpp.o] Error 1
+gmake[1]: *** [CMakeFiles/Makefile2:137: CMakeFiles/rrt_core.dir/all] Error 2
+gmake: *** [Makefile:146: all] Error 2

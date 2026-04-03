@@ -1,0 +1,33 @@
+[0.006s] Invoking command in '/home/gautam/Music/my_ws/rrt_planning/build/rrt_impl': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --build /home/gautam/Music/my_ws/rrt_planning/build/rrt_impl
+[0.044s] [35m[1mConsolidate compiler generated dependencies of target rrt_core[0m
+[0.063s] [ 33%] [32mBuilding CXX object CMakeFiles/rrt_core.dir/src/rrt.cpp.o[0m
+[0.066s] [ 66%] [32mBuilding CXX object CMakeFiles/rrt_core.dir/src/check_collision.cpp.o[0m
+[2.945s] [01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/check_collision.cpp:[m[K In member function ‘[01m[Kbool collision::CheckCollision::isStateValid(const std::vector<double>&) const[m[K’:
+[2.945s] [01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/check_collision.cpp:45:57:[m[K [01;31m[Kerror: [m[Kno matching function for call to ‘[01m[KcomputeCollisions(const Model&, pinocchio::Data&, const pinocchio::GeometryModel&, pinocchio::GeometryData&, bool)[m[K’
+[2.945s]    45 |         bool in_collision = [01;31m[Kpinocchio::computeCollisions([m[K
+[2.945s]       |                             [01;31m[K~~~~~~~~~~~~~~~~~~~~~~~~~~~~^[m[K
+[2.945s]    46 | [01;31m[K            model_, data_, geom_model_, geom_data_, /*stopAtFirstCollision=*/true)[m[K;
+[2.945s]       |             [01;31m[K~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[m[K
+[2.945s] In file included from [01m[K/opt/openrobots/include/pinocchio/collision/collision.hpp:119[m[K,
+[2.945s]                  from [01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/include/rrt_impl/check_collision.hpp:18[m[K,
+[2.945s]                  from [01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/check_collision.cpp:1[m[K:
+[2.945s] [01m[K/opt/openrobots/include/pinocchio/collision/collision.hxx:117:15:[m[K [01;36m[Knote: [m[Kcandidate: ‘[01m[Ktemplate<class Scalar, int Options, template<class, int <anonymous> > class JointCollectionTpl, class ConfigVectorType> bool pinocchio::computeCollisions(const pinocchio::ModelTpl<_Scalar, _Options, JointCollectionTpl>&, pinocchio::DataTpl<S1, O1, JointCollectionTpl>&, const pinocchio::GeometryModel&, pinocchio::GeometryData&, const Eigen::MatrixBase<Matrix3Like>&, bool)[m[K’
+[2.945s]   117 |   inline bool [01;36m[KcomputeCollisions[m[K(
+[2.945s]       |               [01;36m[K^~~~~~~~~~~~~~~~~[m[K
+[2.945s] [01m[K/opt/openrobots/include/pinocchio/collision/collision.hxx:117:15:[m[K [01;36m[Knote: [m[K  template argument deduction/substitution failed:
+[2.945s] [01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/check_collision.cpp:45:57:[m[K [01;36m[Knote: [m[K  mismatched types ‘[01m[Kconst Eigen::MatrixBase<Matrix3Like>[m[K’ and ‘[01m[Kbool[m[K’
+[2.945s]    45 |         bool in_collision = [01;36m[Kpinocchio::computeCollisions([m[K
+[2.945s]       |                             [01;36m[K~~~~~~~~~~~~~~~~~~~~~~~~~~~~^[m[K
+[2.945s]    46 | [01;36m[K            model_, data_, geom_model_, geom_data_, /*stopAtFirstCollision=*/true)[m[K;
+[2.945s]       |             [01;36m[K~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[m[K
+[2.945s] In file included from [01m[K/opt/openrobots/include/pinocchio/collision/collision.hpp:119[m[K,
+[2.945s]                  from [01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/include/rrt_impl/check_collision.hpp:18[m[K,
+[2.945s]                  from [01m[K/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/check_collision.cpp:1[m[K:
+[2.945s] [01m[K/opt/openrobots/include/pinocchio/collision/collision.hxx:78:15:[m[K [01;36m[Knote: [m[Kcandidate: ‘[01m[Kbool pinocchio::computeCollisions(const pinocchio::GeometryModel&, pinocchio::GeometryData&, bool)[m[K’
+[2.945s]    78 |   inline bool [01;36m[KcomputeCollisions[m[K(
+[2.945s]       |               [01;36m[K^~~~~~~~~~~~~~~~~[m[K
+[2.946s] [01m[K/opt/openrobots/include/pinocchio/collision/collision.hxx:78:15:[m[K [01;36m[Knote: [m[K  candidate expects 3 arguments, 5 provided
+[5.139s] gmake[2]: *** [CMakeFiles/rrt_core.dir/build.make:90: CMakeFiles/rrt_core.dir/src/check_collision.cpp.o] Error 1
+[5.139s] gmake[1]: *** [CMakeFiles/Makefile2:137: CMakeFiles/rrt_core.dir/all] Error 2
+[5.139s] gmake: *** [Makefile:146: all] Error 2
+[5.141s] Invoked command in '/home/gautam/Music/my_ws/rrt_planning/build/rrt_impl' returned '2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --build /home/gautam/Music/my_ws/rrt_planning/build/rrt_impl
