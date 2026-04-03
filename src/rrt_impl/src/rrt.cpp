@@ -249,6 +249,14 @@ namespace rrt_core
 
     bool RRT::isCollisionFree(const std::vector<double> &q) const
     {
+        if (collision_checker_.isStateValid(q))
+        {
+            std::cout << "State is valid" << std::endl;
+        }
+        else
+        {
+            std::cout << "State is in collision" << std::endl;
+        }
         return collision_checker_.isStateValid(q);
     }
 

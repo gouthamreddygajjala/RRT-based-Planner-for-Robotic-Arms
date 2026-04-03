@@ -47,6 +47,13 @@ ament_target_dependencies(rrt_core
   visualization_msgs
 )
 
+add_executable(rrt_node src/rrt_node.cpp)
+
+target_link_libraries(rrt_node rrt_core)
+
+ament_target_dependencies(rrt_node rclcpp)
+
+
 # ================= Install =================
 
 install(
@@ -55,7 +62,9 @@ install(
 )
 
 install(
-  TARGETS rrt_core
+  TARGETS
+    rrt_core
+    rrt_node
   DESTINATION lib/${PROJECT_NAME}
 )
 

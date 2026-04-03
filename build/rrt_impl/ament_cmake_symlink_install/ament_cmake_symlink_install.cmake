@@ -318,7 +318,7 @@ message(STATUS "Execute custom install script")
 # install(DIRECTORY "include/" "DESTINATION" "include/")
 ament_cmake_symlink_install_directory("/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl" DIRECTORY "include/" "DESTINATION" "include/")
 
-# install("TARGETS" "rrt_core" "DESTINATION" "lib/rrt_impl")
+# install("TARGETS" "rrt_core" "rrt_node" "DESTINATION" "lib/rrt_impl")
 include("/home/gautam/Music/my_ws/rrt_planning/build/rrt_impl/ament_cmake_symlink_install_targets_0_${CMAKE_INSTALL_CONFIG_NAME}.cmake")
 
 # install(FILES "/home/gautam/Music/my_ws/rrt_planning/build/rrt_impl/ament_cmake_index/share/ament_index/resource_index/package_run_dependencies/rrt_impl" "DESTINATION" "share/ament_index/resource_index/package_run_dependencies")
