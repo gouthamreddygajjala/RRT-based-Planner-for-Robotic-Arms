@@ -1,1 +1,0 @@
-/home/gautam/Music/my_ws/rrt_planning/src/franka_description/launch/visualize_franka_duo.launch.py

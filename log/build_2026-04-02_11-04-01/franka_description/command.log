@@ -1,4 +1,0 @@
-Invoking command in '/home/gautam/Music/my_ws/rrt_planning/build/franka_description': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --build /home/gautam/Music/my_ws/rrt_planning/build/franka_description
-Invoked command in '/home/gautam/Music/my_ws/rrt_planning/build/franka_description' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --build /home/gautam/Music/my_ws/rrt_planning/build/franka_description
-Invoking command in '/home/gautam/Music/my_ws/rrt_planning/build/franka_description': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --install /home/gautam/Music/my_ws/rrt_planning/build/franka_description
-Invoked command in '/home/gautam/Music/my_ws/rrt_planning/build/franka_description' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --install /home/gautam/Music/my_ws/rrt_planning/build/franka_description
