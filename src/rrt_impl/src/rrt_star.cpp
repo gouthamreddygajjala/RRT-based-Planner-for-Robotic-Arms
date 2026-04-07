@@ -1,266 +1,156 @@
-#include "rrt_impl/rrt.hpp"
+#include "rrt_impl/rrt_star.hpp"
+#include <cmath>
+#include <limits>
+#include <iostream>
 
 namespace rrt_core
 {
-    RRT::RRT(size_t dof, const std::string &urdf_path) : dof_(dof), collision_checker_(urdf_path)
+    RRTStar::RRTStar(size_t dof, const std::string &urdf_path) : RRT(dof, urdf_path)
     {
-        std::random_device rd;
-        rng_ = std::mt19937(rd());
     }
 
-    void RRT::setStart(const std::vector<double> &q)
+    void RRTStar::setRewireRadius(double r) { rewire_radius_ = r; }
+
+    double RRTStar::getCost(int idx) const
     {
-        validateConfig(q);
-
-        q_start_ = q;
-
-        nodes_.clear();
-        nodes_.push_back({q_start_, -1}); // root node
+        return (idx >= 0 && idx < (int)cost_.size()) ? cost_[idx] : 0.0;
     }
 
-    void RRT::setGoal(const std::vector<double> &q)
+    double RRTStar::computeRadius() const
     {
-        validateConfig(q);
-        q_goal_ = q;
+        // Asymptotically optimal shrinking-ball radius:
+        // r = gamma * (log(n) / n)^(1/d)
+        // gamma > 2 * (1 + 1/d)^(1/d) * (vol(free) / vol(unit_ball))^(1/d)
+        const double gamma = 2.0 * std::pow(1.5 * (1.0 + 1.0 / dof_), 1.0 / dof_);
+        size_t n = nodes_.size();
+        if (n <= 1)
+            return step_size_ * 2.0;
+        return gamma * std::pow(std::log((double)n) / (double)n, 1.0 / dof_);
     }
 
-    void RRT::setJointLimits(const std::vector<double> &lower, const std::vector<double> &upper)
+    std::vector<int> RRTStar::getNeighbors(const std::vector<double> &q, double radius) const
     {
-        if (lower.size() != dof_ || upper.size() != dof_)
-        {
-            throw std::runtime_error("Joint limits size mismatch");
-        }
-
-        lower_limits_ = lower;
-        upper_limits_ = upper;
-    }
-
-    void RRT::setStepSize(double step) { step_size_ = step; }
-    void RRT::setGoalBias(double bias) { goal_bias_ = bias; }
-    void RRT::setGoalTolerance(double tol) { goal_tolerance_ = tol; }
-    void RRT::reserve(size_t n) { nodes_.reserve(n); }
-
-    void RRT::validateConfig(const std::vector<double> &q) const
-    {
-        if (q.size() != dof_)
-        {
-            throw std::runtime_error("Configuration DOF mismatch");
-        }
-
-        // Optional (but useful): check joint limits if set
-        if (!lower_limits_.empty() || !upper_limits_.empty())
-        {
-            for (size_t i = 0; i < dof_; ++i)
-            {
-                if (q[i] < lower_limits_[i] || q[i] > upper_limits_[i])
-                {
-                    throw std::runtime_error("Configuration violates joint limits");
-                }
-            }
-        }
-    }
-
-    double RRT::distance(const std::vector<double> &a, const std::vector<double> &b) const // Joint Euclidean distance(not cartesian)
-    {
-        double sum = 0.0;
-
-        for (size_t i = 0; i < dof_; ++i)
-        {
-            double d = a[i] - b[i];
-            sum += d * d;
-        }
-
-        return std::sqrt(sum);
-    }
-
-    std::vector<double> RRT::sampleRandomConfig()
-    {
-        // Probability distribution for goal bias
-        std::uniform_real_distribution<double> prob_dist(0.0, 1.0);
-
-        // Goal biasing
-        if (prob_dist(rng_) < goal_bias_)
-        {
-            return q_goal_;
-        }
-
-        std::vector<double> q(dof_);
-
-        for (size_t i = 0; i < dof_; ++i)
-        {
-            std::uniform_real_distribution<double> dist(
-                lower_limits_[i],
-                upper_limits_[i]);
-
-            q[i] = dist(rng_);
-        }
-
-        return q;
-    }
-
-    int RRT::getNearestNode(const std::vector<double> &q)
-    {
-        double min_dist = std::numeric_limits<double>::max();
-        int nearest_idx = 0;
-
+        std::vector<int> neighbors;
         for (size_t i = 0; i < nodes_.size(); ++i)
         {
-            double d = distance(nodes_[i].q, q);
-
-            if (d < min_dist)
-            {
-                min_dist = d;
-                nearest_idx = static_cast<int>(i);
-            }
+            if (distance(nodes_[i].q, q) <= radius)
+                neighbors.push_back((int)i);
         }
-
-        return nearest_idx;
+        return neighbors;
     }
 
-    std::vector<double> RRT::steer(const std::vector<double> &q_near, const std::vector<double> &q_rand)
+    void RRTStar::propagateCostUpdate(int parent_idx, double parent_cost)
     {
-        std::vector<double> q_new(dof_);
-
-        double dist = distance(q_near, q_rand);
-
-        // If already close, just return q_rand
-        if (dist < step_size_)
+        for (size_t i = 0; i < nodes_.size(); ++i)
         {
-            return q_rand;
-        }
-
-        // Move from q_near toward q_rand
-        for (size_t i = 0; i < dof_; ++i)
-        {
-            q_new[i] = q_near[i] +
-                       step_size_ * (q_rand[i] - q_near[i]) / dist;
-        }
-
-        return q_new;
-    }
-
-    bool RRT::isEdgeCollisionFree(const std::vector<double> &q1,
-                                  const std::vector<double> &q2) const
-    {
-        double dist = distance(q1, q2);
-
-        // Resolution of interpolation (tunable)
-        const double resolution = 0.05;
-
-        int steps = static_cast<int>(dist / resolution);
-
-        // Ensure at least one check
-        steps = std::max(steps, 1);
-
-        for (int i = 0; i <= steps; ++i)
-        {
-            double t = static_cast<double>(i) / steps;
-
-            std::vector<double> q_interp(dof_);
-
-            for (size_t j = 0; j < dof_; ++j)
+            if (nodes_[i].parent_index == parent_idx)
             {
-                q_interp[j] = q1[j] + t * (q2[j] - q1[j]);
-            }
-
-            if (!isCollisionFree(q_interp))
-            {
-                return false;
+                double edge_len = distance(nodes_[parent_idx].q, nodes_[i].q);
+                cost_[i] = parent_cost + edge_len;
+                propagateCostUpdate((int)i, cost_[i]);
             }
         }
-
-        return true;
     }
 
-    bool RRT::plan(int max_iter)
+    bool RRTStar::plan(int max_iter)
     {
         // Safety checks
         if (q_start_.empty() || q_goal_.empty())
-        {
             throw std::runtime_error("Start or Goal not set");
-        }
 
         if (lower_limits_.empty())
-        {
             throw std::runtime_error("Joint limits not set");
-        }
 
+        // Re-initialise tree (setStart already cleared nodes_)
+        cost_.clear();
+        cost_.push_back(0.0); // root node has zero cost
         goal_index_ = -1;
+        double best_goal_cost = std::numeric_limits<double>::max();
 
-        for (int i = 0; i < max_iter; ++i)
+        for (int iter = 0; iter < max_iter; ++iter)
         {
-            // 1. Sample
+            // ── 1. Sample ──────────────────────────────────────────────────
             auto q_rand = sampleRandomConfig();
 
-            // 2. Nearest
+            // ── 2. Nearest ─────────────────────────────────────────────────
             int nearest_idx = getNearestNode(q_rand);
             const auto &q_near = nodes_[nearest_idx].q;
 
-            // 3. Steer
+            // ── 3. Steer ───────────────────────────────────────────────────
             auto q_new = steer(q_near, q_rand);
 
-            // 4. Collision (edge check)
+            // ── 4. Edge collision check (nearest → new) ────────────────────
             if (!isEdgeCollisionFree(q_near, q_new))
                 continue;
 
-            // 5. Add node
-            nodes_.push_back({q_new, nearest_idx});
-            int new_idx = nodes_.size() - 1;
+            // ── 5. Find neighbors within rewire radius ──────────────────────
+            double radius = (rewire_radius_ > 0.0) ? rewire_radius_ : computeRadius();
+            auto neighbors = getNeighbors(q_new, radius);
 
-            // 6. Goal check
-            if (distance(q_new, q_goal_) < goal_tolerance_)
+            // ── 6. Choose best parent from neighbors ───────────────────────
+            int best_parent = nearest_idx;
+            double best_cost = cost_[nearest_idx] + distance(nodes_[nearest_idx].q, q_new);
+
+            for (int nb_idx : neighbors)
             {
-                // Connect goal
-                nodes_.push_back({q_goal_, new_idx});
-                goal_index_ = nodes_.size() - 1;
+                double candidate_cost = cost_[nb_idx] + distance(nodes_[nb_idx].q, q_new);
+                if (candidate_cost < best_cost && isEdgeCollisionFree(nodes_[nb_idx].q, q_new))
+                {
+                    best_cost = candidate_cost;
+                    best_parent = nb_idx;
+                }
+            }
 
-                std::cout << "[RRT] Tree size: " << nodes_.size() << std::endl;  //tree size at success
+            // ── 7. Add node ────────────────────────────────────────────────
+            nodes_.push_back({q_new, best_parent});
+            cost_.push_back(best_cost);
+            int new_idx = (int)nodes_.size() - 1;
 
-                return true; // success
+            // ── 8. Rewire neighbors through the new node ───────────────────
+            for (int nb_idx : neighbors)
+            {
+                double rewired_cost = best_cost + distance(q_new, nodes_[nb_idx].q);
+                if (rewired_cost < cost_[nb_idx] && isEdgeCollisionFree(q_new, nodes_[nb_idx].q))
+                {
+                    nodes_[nb_idx].parent_index = new_idx;
+                    cost_[nb_idx] = rewired_cost;
+
+                    // Propagate updated cost down the affected subtree
+                    propagateCostUpdate(nb_idx, rewired_cost);
+                }
+            }
+
+            // ── 9. Goal check – keep improving if a better path is found ───
+            double dist_to_goal = distance(q_new, q_goal_);
+            if (dist_to_goal < goal_tolerance_)
+            {
+                double goal_cost = best_cost + dist_to_goal;
+                if (goal_cost < best_goal_cost)
+                {
+                    best_goal_cost = goal_cost;
+                    if (goal_index_ == -1)
+                    {
+                        // First time we reach the goal – add goal node
+                        nodes_.push_back({q_goal_, new_idx});
+                        cost_.push_back(goal_cost);
+                        goal_index_ = (int)nodes_.size() - 1;
+                    }
+                    else
+                    {
+                        // Better path found – update existing goal node
+                        nodes_[goal_index_].parent_index = new_idx;
+                        cost_[goal_index_] = goal_cost;
+                    }
+                }
             }
         }
 
-        std::cout << "[RRT] Tree size: " << nodes_.size() << std::endl;   //tree size at failure
+        std::cout << "[RRT*] Tree size: " << nodes_.size()
+                  << "  Best goal cost: "
+                  << (goal_index_ != -1 ? best_goal_cost : -1.0)
+                  << std::endl;
 
-        return false; // failed
-    }
-
-    std::vector<std::vector<double>> RRT::getPath() const
-    {
-        std::vector<std::vector<double>> path;
-
-        // If planning failed
-        if (goal_index_ == -1)
-        {
-            return path;
-        }
-
-        int idx = goal_index_;
-
-        // Backtrack from goal to start
-        while (idx != -1)
-        {
-            path.push_back(nodes_[idx].q);
-            idx = nodes_[idx].parent_index;
-        }
-
-        // Reverse to get start → goal
-        std::reverse(path.begin(), path.end());
-
-        return path;
-    }
-
-    bool RRT::isCollisionFree(const std::vector<double> &q) const
-    {
-        if (collision_checker_.isStateValid(q))
-        {
-            std::cout << "State is valid" << std::endl;
-        }
-        else
-        {
-            std::cout << "State is in collision" << std::endl;
-        }
-        return collision_checker_.isStateValid(q);
+        return goal_index_ != -1;
     }
 
 } // namespace rrt_core

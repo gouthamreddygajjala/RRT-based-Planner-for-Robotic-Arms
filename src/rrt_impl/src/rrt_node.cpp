@@ -3,10 +3,10 @@
 
 RRTNode::RRTNode() : Node("rrt_node"), max_iterations_(1000)
 {
-    q_start_ = {0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785};
+    // q_start_ = {0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785};
 
-    goal_sub_ = this->create_subscription<std_msgs::msg::Float64MultiArray>("/goal_command", 10,
-                                                                            std::bind(&RRTNode::goalCallback, this, std::placeholders::_1));
+    goal_sub_ = this->create_subscription<GoalCommand>("/goal_command", 10,
+                                                       std::bind(&RRTNode::goalCallback, this, std::placeholders::_1));
 
     tcp_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("/rrt_path", 10);
 
@@ -19,12 +19,15 @@ RRTNode::RRTNode() : Node("rrt_node"), max_iterations_(1000)
     this->declare_parameter<std::string>(prefix + "urdf", "");
     this->declare_parameter<std::vector<double>>(prefix + "joint_limits.lower", {});
     this->declare_parameter<std::vector<double>>(prefix + "joint_limits.upper", {});
+    this->declare_parameter<std::vector<double>>(prefix + "home_config", {});
 
     // 3. Read them
     int dof = this->get_parameter(prefix + "dof").as_int();
     std::string urdf = this->get_parameter(prefix + "urdf").as_string();
     lower_limits_ = this->get_parameter(prefix + "joint_limits.lower").as_double_array();
     upper_limits_ = this->get_parameter(prefix + "joint_limits.upper").as_double_array();
+    q_start_ = this->get_parameter(prefix + "home_config").as_double_array();
+
 
     if (use_arm.empty())
     {
@@ -49,6 +52,9 @@ RRTNode::RRTNode() : Node("rrt_node"), max_iterations_(1000)
     rrt_ = std::make_shared<rrt_core::RRT>(dof, urdf);
     rrt_->setJointLimits(lower_limits_, upper_limits_);
 
+    rrt_star_ = std::make_shared<rrt_core::RRTStar>(dof_, urdf);
+    rrt_star_->setJointLimits(lower_limits_, upper_limits_);
+
     smoother_ = std::make_shared<rrt_core::RuckigSmoother>(dof_, 0.01);
 
     collision_checker_ = std::make_shared<collision::CheckCollision>(urdf); // only to compute path length, not used in RRT (can be used for future optimizations)
@@ -56,24 +62,63 @@ RRTNode::RRTNode() : Node("rrt_node"), max_iterations_(1000)
     RCLCPP_INFO(this->get_logger(), "RRT Node initialized. Waiting for goal...");
 }
 
-void RRTNode::run()
+void RRTNode::run(uint8_t planner_type)
 {
-    rrt_->setStart(q_start_);
-    rrt_->setGoal(q_goal_);
+    bool success = false;
 
-    auto start = std::chrono::high_resolution_clock::now();
+    auto start_time = std::chrono::high_resolution_clock::now();
 
-    bool success = rrt_->plan(max_iterations_);
+    switch (planner_type)
+    {
+    case GoalCommand::RRT:
+    {
+        RCLCPP_INFO(this->get_logger(), "Planner: RRT");
+        rrt_->setStart(q_start_);
+        rrt_->setGoal(q_goal_);
+        success = rrt_->plan(max_iterations_);
+        break;
+    }
 
-    auto end = std::chrono::high_resolution_clock::now();
+    case GoalCommand::RRT_STAR:
+    {
+        RCLCPP_INFO(this->get_logger(), "Planner: RRT*");
+        rrt_star_->setStart(q_start_);
+        rrt_star_->setGoal(q_goal_);
+        success = rrt_star_->plan(max_iterations_);
+        break;
+    }
 
-    double duration_ms = std::chrono::duration<double, std::milli>(end - start).count();
+    case GoalCommand::RRT_CONNECT:
+    {
+        // Not implemented yet — fall through to warning
+        RCLCPP_WARN(this->get_logger(), "RRT-Connect (type %d) is not implemented yet. Falling back to RRT.",
+                    planner_type);
+        rrt_->setStart(q_start_);
+        rrt_->setGoal(q_goal_);
+        success = rrt_->plan(max_iterations_);
+        break;
+    }
+
+    default:
+    {
+        RCLCPP_WARN(this->get_logger(),
+                    "Unknown planner type %d. Falling back to RRT.", planner_type);
+        rrt_->setStart(q_start_);
+        rrt_->setGoal(q_goal_);
+        success = rrt_->plan(max_iterations_);
+        break;
+    }
+    }
+
+    auto end_time = std::chrono::high_resolution_clock::now();
+    double duration_ms = std::chrono::duration<double, std::milli>(end_time - start_time).count();
 
     if (success)
     {
         RCLCPP_INFO(this->get_logger(), "Path found!");
 
-        path_ = rrt_->getPath();
+        path_ = (planner_type == GoalCommand::RRT_STAR) ? rrt_star_->getPath()
+                                                        : rrt_->getPath();
         // path_ = rrt_->shortcutPath(path_);
         // path_ = rrt_->interpolatePath(path_, 200); // cubic spline, doesnt work
 
@@ -106,26 +151,26 @@ void RRTNode::run()
         RCLCPP_WARN(this->get_logger(), "Planning failed!");
     }
 
-    double length = collision_checker_->computeCartesianPathLength(path_, tcp_path);
+    tcp_path.clear();
 
+    double length = collision_checker_->computeCartesianPathLength(path_, tcp_path);
     publishTCPPath(tcp_path);
 
     RCLCPP_INFO(this->get_logger(), "Cartesian path length: %.4f meters, Planning time: %.3f ms", length, duration_ms);
 }
 
-void RRTNode::goalCallback(const std_msgs::msg::Float64MultiArray::SharedPtr msg)
+void RRTNode::goalCallback(const GoalCommand::SharedPtr msg)
 {
-    if (msg->data.size() != static_cast<size_t>(dof_))
+    if (msg->goal.size() != static_cast<size_t>(dof_))
     {
-        RCLCPP_WARN(this->get_logger(), "Invalid goal size! Expected %d DOF.", dof_);
+        RCLCPP_WARN(this->get_logger(), "Invalid goal size! Expected %d DOF, got %ld.", dof_, msg->goal.size());
         return;
     }
 
-    q_goal_ = msg->data;
+    q_goal_ = msg->goal;
 
-    RCLCPP_INFO(this->get_logger(), "Received new goal. Starting planning...");
-
-    run();
+    RCLCPP_INFO(this->get_logger(), "Received goal. Planner type: %d. Starting planning...", static_cast<int>(msg->planner_type));
+    run(msg->planner_type);
 }
 
 void RRTNode::publishTCPPath(const std::vector<Eigen::Vector3d> &tcp_path)

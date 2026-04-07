@@ -3,15 +3,19 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "rrt_impl/rrt.hpp"
+#include "rrt_impl/rrt_star.hpp"
 
 #include <vector>
 #include <string>
 #include "std_msgs/msg/float64_multi_array.hpp"
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
+#include "custom_msgs/msg/goal_command.hpp"
 #include <chrono>
 
 #include "ruckig.hpp"
+
+using GoalCommand = custom_msgs::msg::GoalCommand;
 
 class RRTNode : public rclcpp::Node
 {
@@ -21,16 +25,18 @@ public:
 private:
     std::string robot_name_;
     int dof_;
-    void run();
+    void run(uint8_t planner_type);
 
-    rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr goal_sub_;
+    rclcpp::Subscription<GoalCommand>::SharedPtr goal_sub_;
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr tcp_pub_;
 
-    void goalCallback(const std_msgs::msg::Float64MultiArray::SharedPtr msg);
+    void goalCallback(const GoalCommand::SharedPtr msg);
     void publishTCPPath(const std::vector<Eigen::Vector3d> &tcp_path);
 
     // --- RRT Core ---
     std::shared_ptr<rrt_core::RRT> rrt_;
+    std::shared_ptr<rrt_core::RRTStar> rrt_star_;
+
     std::shared_ptr<collision::CheckCollision> collision_checker_;
 
     // --- Configurations ---

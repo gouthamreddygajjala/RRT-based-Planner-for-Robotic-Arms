@@ -11,7 +11,6 @@
 #include "rrt_impl/check_collision.hpp"
 #include "kd_tree.hpp"
 
-
 namespace rrt_core
 {
 
@@ -46,7 +45,21 @@ namespace rrt_core
         std::vector<std::vector<double>> shortcutPath(const std::vector<std::vector<double>> &path);
         std::vector<std::vector<double>> interpolatePath(const std::vector<std::vector<double>> &path, int num_points);
 
-    private:
+        size_t dof_;
+        std::vector<RRTNode> nodes_;
+
+        double step_size_{0.06}; // 0.1
+        double goal_bias_{0.1};
+        double goal_tolerance_{0.1};
+
+        int goal_index_{-1};
+
+        std::vector<double> q_start_;
+        std::vector<double> q_goal_;
+
+        std::vector<double> lower_limits_;
+        std::vector<double> upper_limits_;
+
         std::vector<double> sampleRandomConfig();
         int getNearestNode(const std::vector<double> &q);
         std::vector<double> steer(const std::vector<double> &q_near,
@@ -62,23 +75,7 @@ namespace rrt_core
         void validateConfig(const std::vector<double> &q) const;
 
     private:
-        size_t dof_;
-
-        std::vector<RRTNode> nodes_;
-
         KDTree kd_tree_;
-
-        std::vector<double> q_start_;
-        std::vector<double> q_goal_;
-
-        std::vector<double> lower_limits_;
-        std::vector<double> upper_limits_;
-
-        double step_size_{0.06}; // 0.1
-        double goal_bias_{0.1};
-        double goal_tolerance_{0.1};
-
-        int goal_index_{-1};
 
         std::mt19937 rng_;
 

@@ -19,6 +19,7 @@ find_package(pinocchio REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(hpp-fcl REQUIRED)
 find_package(ruckig REQUIRED)
+find_package(custom_msgs REQUIRED)
 
 
 # ================= Include =================
@@ -32,6 +33,7 @@ include_directories(
 
 add_library(rrt_core
   src/rrt.cpp
+  src/rrt_star.cpp
   src/check_collision.cpp
 )
 
@@ -49,6 +51,7 @@ ament_target_dependencies(rrt_core
   nav_msgs
   std_msgs
   visualization_msgs
+  custom_msgs
 )
 
 add_executable(rrt_node src/rrt_node.cpp)
