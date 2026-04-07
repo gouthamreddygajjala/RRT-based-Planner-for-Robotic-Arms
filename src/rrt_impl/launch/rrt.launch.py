@@ -14,10 +14,10 @@ def generate_launch_description():
 
     param_file = os.path.join(pkg_share, 'config', 'robot_config.yaml')
     
-    with open(param_file, 'r') as f:
-        print("YAML CONTENTS:", yaml.safe_load(f))
+    # with open(param_file, 'r') as f:
+    #     print("YAML CONTENTS:", yaml.safe_load(f))
 
-    print("PARAM FILE:", param_file)  # 👈 DEBUG
+    # print("PARAM FILE:", param_file)  # 👈 DEBUG
 
     return LaunchDescription([
         Node(

@@ -2,8 +2,7 @@
 
 namespace rrt_core
 {
-    RRT::RRT(size_t dof, const std::string &urdf_path) : dof_(dof),
-                                                         collision_checker_(urdf_path)
+    RRT::RRT(size_t dof, const std::string &urdf_path) : dof_(dof), collision_checker_(urdf_path), kd_tree_(dof)
     {
         std::random_device rd;
         rng_ = std::mt19937(rd());
@@ -13,15 +12,29 @@ namespace rrt_core
     {
         validateConfig(q);
 
+        if (!isCollisionFree(q))
+        {
+            throw std::runtime_error("Start configuration is in collision");
+        }
+
         q_start_ = q;
 
         nodes_.clear();
+        kd_tree_.clear(); // reset
+
         nodes_.push_back({q_start_, -1}); // root node
+        kd_tree_.insert(q_start_, 0);     // seed with start node
     }
 
     void RRT::setGoal(const std::vector<double> &q)
     {
         validateConfig(q);
+
+        if (!isCollisionFree(q))
+        {
+            throw std::runtime_error("Goal configuration is in collision");
+        }
+
         q_goal_ = q;
     }
 
@@ -49,7 +62,7 @@ namespace rrt_core
         }
 
         // Optional (but useful): check joint limits if set
-        if (!lower_limits_.empty() || !upper_limits_.empty())
+        if (!lower_limits_.empty() && !upper_limits_.empty())
         {
             for (size_t i = 0; i < dof_; ++i)
             {
@@ -99,23 +112,28 @@ namespace rrt_core
         return q;
     }
 
+    // int RRT::getNearestNode(const std::vector<double> &q)
+    // {
+    //     double min_dist = std::numeric_limits<double>::max();
+    //     int nearest_idx = 0;
+
+    //     for (size_t i = 0; i < nodes_.size(); ++i)
+    //     {
+    //         double d = distance(nodes_[i].q, q);
+
+    //         if (d < min_dist)
+    //         {
+    //             min_dist = d;
+    //             nearest_idx = static_cast<int>(i);
+    //         }
+    //     }
+
+    //     return nearest_idx;
+    // }
+
     int RRT::getNearestNode(const std::vector<double> &q)
     {
-        double min_dist = std::numeric_limits<double>::max();
-        int nearest_idx = 0;
-
-        for (size_t i = 0; i < nodes_.size(); ++i)
-        {
-            double d = distance(nodes_[i].q, q);
-
-            if (d < min_dist)
-            {
-                min_dist = d;
-                nearest_idx = static_cast<int>(i);
-            }
-        }
-
-        return nearest_idx;
+        return kd_tree_.nearest(q);
     }
 
     std::vector<double> RRT::steer(const std::vector<double> &q_near, const std::vector<double> &q_rand)
@@ -133,8 +151,8 @@ namespace rrt_core
         // Move from q_near toward q_rand
         for (size_t i = 0; i < dof_; ++i)
         {
-            q_new[i] = q_near[i] +
-                       step_size_ * (q_rand[i] - q_near[i]) / dist;
+            q_new[i] = q_near[i] + step_size_ * (q_rand[i] - q_near[i]) / dist;
+            q_new[i] = std::clamp(q_new[i], lower_limits_[i], upper_limits_[i]);
         }
 
         return q_new;
@@ -173,6 +191,107 @@ namespace rrt_core
         return true;
     }
 
+    std::vector<std::vector<double>> RRT::shortcutPath(const std::vector<std::vector<double>> &path)
+    {
+        if (path.size() <= 2)
+            return path;
+
+        std::vector<std::vector<double>> smoothed;
+        smoothed.push_back(path.front());
+
+        size_t i = 0;
+        const size_t max_skip = 3; // never skip more than 3 waypoints at once
+
+        while (i < path.size() - 1)
+        {
+            // Cap lookahead to max_skip
+            size_t j = std::min(i + max_skip, path.size() - 1);
+
+            while (j > i + 1)
+            {
+                if (isEdgeCollisionFree(path[i], path[j]))
+                    break;
+                --j;
+            }
+
+            smoothed.push_back(path[j]);
+            i = j;
+        }
+
+        return smoothed;
+    }
+
+    std::vector<std::vector<double>> RRT::interpolatePath(const std::vector<std::vector<double>> &path, int num_points) // CUBIC SPLINE INTERPOLATION
+    {
+        int n = path.size();
+        if (n < 2)
+            return path;
+
+        // Parameter t: 0 to 1 evenly spaced over waypoints
+        std::vector<double> t(n);
+        for (int i = 0; i < n; ++i)
+            t[i] = static_cast<double>(i) / (n - 1);
+
+        std::vector<std::vector<double>> result(num_points, std::vector<double>(dof_));
+
+        for (size_t j = 0; j < dof_; ++j)
+        {
+            // Extract this joint's values across waypoints
+            std::vector<double> y(n);
+            for (int i = 0; i < n; ++i)
+                y[i] = path[i][j];
+
+            // Compute cubic spline coefficients (natural spline)
+            std::vector<double> h(n - 1), alpha(n - 1);
+            for (int i = 0; i < n - 1; ++i)
+                h[i] = t[i + 1] - t[i];
+
+            for (int i = 1; i < n - 1; ++i)
+                alpha[i] = (3.0 / h[i]) * (y[i + 1] - y[i]) -
+                           (3.0 / h[i - 1]) * (y[i] - y[i - 1]);
+
+            std::vector<double> l(n, 1.0), mu(n, 0.0), z(n, 0.0);
+
+            for (int i = 1; i < n - 1; ++i)
+            {
+                l[i] = 2.0 * (t[i + 1] - t[i - 1]) - h[i - 1] * mu[i - 1];
+                mu[i] = h[i] / l[i];
+                z[i] = (alpha[i] - h[i - 1] * z[i - 1]) / l[i];
+            }
+
+            std::vector<double> c(n, 0.0), b(n - 1), d(n - 1);
+
+            for (int i = n - 2; i >= 0; --i)
+            {
+                c[i] = z[i] - mu[i] * c[i + 1];
+                b[i] = (y[i + 1] - y[i]) / h[i] - h[i] * (c[i + 1] + 2.0 * c[i]) / 3.0;
+                d[i] = (c[i + 1] - c[i]) / (3.0 * h[i]);
+            }
+
+            // Evaluate spline at num_points
+            for (int k = 0; k < num_points; ++k)
+            {
+                double tk = static_cast<double>(k) / (num_points - 1);
+
+                // Find the segment
+                int seg = 0;
+                for (int i = 0; i < n - 2; ++i)
+                {
+                    if (tk >= t[i + 1])
+                        seg = i + 1;
+                }
+
+                double dt = tk - t[seg];
+                result[k][j] = y[seg] +
+                               b[seg] * dt +
+                               c[seg] * dt * dt +
+                               d[seg] * dt * dt * dt;
+            }
+        }
+
+        return result;
+    }
+
     bool RRT::plan(int max_iter)
     {
         // Safety checks
@@ -208,6 +327,8 @@ namespace rrt_core
             nodes_.push_back({q_new, nearest_idx});
             int new_idx = nodes_.size() - 1;
 
+            kd_tree_.insert(q_new, new_idx); // update KD-tree with new node
+
             // 6. Goal check
             if (distance(q_new, q_goal_) < goal_tolerance_)
             {
@@ -215,9 +336,13 @@ namespace rrt_core
                 nodes_.push_back({q_goal_, new_idx});
                 goal_index_ = nodes_.size() - 1;
 
+                std::cout << "[RRT] Tree size: " << nodes_.size() << std::endl; // tree size at success
+
                 return true; // success
             }
         }
+
+        std::cout << "[RRT] Tree size: " << nodes_.size() << std::endl; // tree size at failure
 
         return false; // failed
     }
@@ -251,7 +376,7 @@ namespace rrt_core
     {
         if (collision_checker_.isStateValid(q))
         {
-            std::cout << "State is valid" << std::endl;
+            // std::cout << "State is valid" << std::endl;
         }
         else
         {

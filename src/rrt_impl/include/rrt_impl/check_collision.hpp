@@ -24,6 +24,7 @@ namespace collision
     public:
         explicit CheckCollision(const std::string &urdf_path);
         bool isStateValid(const std::vector<double> &q) const;
+        double computeCartesianPathLength(const std::vector<std::vector<double>> &path, std::vector<Eigen::Vector3d> &tcp_points);
 
     private:
         pinocchio::Model model_;
@@ -31,6 +32,8 @@ namespace collision
 
         pinocchio::GeometryModel geom_model_;
         mutable pinocchio::GeometryData geom_data_;
+
+        pinocchio::FrameIndex ee_frame_id_;
 
         int dof_;
     };

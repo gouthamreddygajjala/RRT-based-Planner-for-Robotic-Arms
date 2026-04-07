@@ -1,0 +1,81 @@
+#pragma once
+
+#include <vector>
+#include <random>
+
+#include <limits>
+#include <cmath>
+#include <algorithm>
+#include <stdexcept>
+
+#include "rrt_impl/check_collision.hpp"
+
+namespace rrt_core
+{
+
+    struct RRTNode
+    {
+        std::vector<double> q;
+        int parent_index;
+    };
+
+    class RRT
+    {
+    public:
+        explicit RRT(size_t dof, const std::string& urdf_path);
+
+        void setStart(const std::vector<double> &q);
+        void setGoal(const std::vector<double> &q);
+
+        void setJointLimits(const std::vector<double> &lower,
+                            const std::vector<double> &upper);
+
+        void setStepSize(double step);
+        void setGoalBias(double bias);
+        void setGoalTolerance(double tol);
+
+        void reserve(size_t n);
+
+        bool plan(int max_iter);
+        std::vector<std::vector<double>> getPath() const;
+
+        const std::vector<RRTNode> &getNodes() const;
+
+    private:
+        std::vector<double> sampleRandomConfig();
+        int getNearestNode(const std::vector<double> &q);
+        std::vector<double> steer(const std::vector<double> &q_near,
+                                  const std::vector<double> &q_rand);
+
+        double distance(const std::vector<double> &a,
+                        const std::vector<double> &b) const;
+
+        bool isCollisionFree(const std::vector<double> &q) const;
+        bool isEdgeCollisionFree(const std::vector<double> &q1,
+                                 const std::vector<double> &q2) const;
+
+        void validateConfig(const std::vector<double> &q) const;
+
+    private:
+        size_t dof_;
+
+        std::vector<RRTNode> nodes_;
+
+        std::vector<double> q_start_;
+        std::vector<double> q_goal_;
+
+        std::vector<double> lower_limits_;
+        std::vector<double> upper_limits_;
+
+        double step_size_{0.06};  //0.1
+        double goal_bias_{0.1};
+        double goal_tolerance_{0.1};
+
+        int goal_index_{-1};
+
+        std::mt19937 rng_;
+
+        collision::CheckCollision collision_checker_;
+    };
+
+} // namespace rrt_core

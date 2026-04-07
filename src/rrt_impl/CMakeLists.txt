@@ -18,6 +18,8 @@ find_package(std_msgs REQUIRED)
 find_package(pinocchio REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(hpp-fcl REQUIRED)
+find_package(ruckig REQUIRED)
+
 
 # ================= Include =================
 
@@ -37,6 +39,7 @@ add_library(rrt_core
 target_link_libraries(rrt_core
   pinocchio::pinocchio
   hpp-fcl::hpp-fcl
+  ruckig::ruckig       
 )
 
 # ROS dependencies

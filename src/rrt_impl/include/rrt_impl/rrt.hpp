@@ -9,6 +9,8 @@
 #include <stdexcept>
 
 #include "rrt_impl/check_collision.hpp"
+#include "kd_tree.hpp"
+
 
 namespace rrt_core
 {
@@ -22,7 +24,7 @@ namespace rrt_core
     class RRT
     {
     public:
-        explicit RRT(size_t dof, const std::string& urdf_path);
+        explicit RRT(size_t dof, const std::string &urdf_path);
 
         void setStart(const std::vector<double> &q);
         void setGoal(const std::vector<double> &q);
@@ -40,6 +42,9 @@ namespace rrt_core
         std::vector<std::vector<double>> getPath() const;
 
         const std::vector<RRTNode> &getNodes() const;
+
+        std::vector<std::vector<double>> shortcutPath(const std::vector<std::vector<double>> &path);
+        std::vector<std::vector<double>> interpolatePath(const std::vector<std::vector<double>> &path, int num_points);
 
     private:
         std::vector<double> sampleRandomConfig();
@@ -61,13 +66,15 @@ namespace rrt_core
 
         std::vector<RRTNode> nodes_;
 
+        KDTree kd_tree_;
+
         std::vector<double> q_start_;
         std::vector<double> q_goal_;
 
         std::vector<double> lower_limits_;
         std::vector<double> upper_limits_;
 
-        double step_size_{0.1};
+        double step_size_{0.06}; // 0.1
         double goal_bias_{0.1};
         double goal_tolerance_{0.1};
 
