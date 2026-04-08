@@ -45,6 +45,8 @@ private:
     std::vector<double> lower_limits_;
     std::vector<double> upper_limits_;
 
+    std::string urdf_;
+
     // Kinematic limits — tune these for your robot   //for panda arm
     std::vector<double> max_vel = {2.175, 2.175, 2.175, 2.175, 2.610, 2.610, 2.610}; // rad/s
     std::vector<double> max_acc = {15.0, 7.5, 10.0, 12.5, 15.0, 20.0, 20.0};         // rad/s²
@@ -54,7 +56,14 @@ private:
 
     std::vector<Eigen::Vector3d> tcp_path;
 
-    int max_iterations_;
+    int max_iterations_ = 5000;
+
+    bool is_debug = false;
+
+    double
+        step_size = 0.06,
+        goal_bias = 0.1,
+        goal_tolerance = 0.1;
 
     // --- Path result ---
     std::vector<std::vector<double>> path_;

@@ -117,8 +117,7 @@ namespace collision
             return false;
         }
 
-        Eigen::VectorXd q_eigen =
-            Eigen::Map<const Eigen::VectorXd>(q.data(), dof_);
+        Eigen::VectorXd q_eigen = Eigen::Map<const Eigen::VectorXd>(q.data(), dof_);
 
         bool in_collision = pinocchio::computeCollisions(
             model_, data_, geom_model_, geom_data_, q_eigen, true);

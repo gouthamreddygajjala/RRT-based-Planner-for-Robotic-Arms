@@ -1,9 +1,8 @@
 #include "rrt_impl/rrt_node.hpp"
 #include <sstream>
 
-RRTNode::RRTNode() : Node("rrt_node"), max_iterations_(1000)
+RRTNode::RRTNode() : Node("rrt_node")
 {
-    // q_start_ = {0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785};
 
     goal_sub_ = this->create_subscription<GoalCommand>("/goal_command", 10,
                                                        std::bind(&RRTNode::goalCallback, this, std::placeholders::_1));
@@ -21,13 +20,25 @@ RRTNode::RRTNode() : Node("rrt_node"), max_iterations_(1000)
     this->declare_parameter<std::vector<double>>(prefix + "joint_limits.upper", {});
     this->declare_parameter<std::vector<double>>(prefix + "home_config", {});
 
-    // 3. Read them
+    this->declare_parameter<bool>("debug", false);
+
+    this->declare_parameter<int>("max_iterations", 1000);
+    this->declare_parameter<double>("step_size", 0.06);
+    this->declare_parameter<double>("goal_bias", 0.1);
+    this->declare_parameter<double>("goal_tolerance", 0.1);
+
     int dof = this->get_parameter(prefix + "dof").as_int();
-    std::string urdf = this->get_parameter(prefix + "urdf").as_string();
+    urdf_ = this->get_parameter(prefix + "urdf").as_string();
     lower_limits_ = this->get_parameter(prefix + "joint_limits.lower").as_double_array();
     upper_limits_ = this->get_parameter(prefix + "joint_limits.upper").as_double_array();
     q_start_ = this->get_parameter(prefix + "home_config").as_double_array();
 
+    is_debug = this->get_parameter("debug").as_bool();
+
+    max_iterations_ = this->get_parameter("max_iterations").as_int();
+    step_size = this->get_parameter("step_size").as_double();
+    goal_bias = this->get_parameter("goal_bias").as_double();
+    goal_tolerance = this->get_parameter("goal_tolerance").as_double();
 
     if (use_arm.empty())
     {
@@ -49,15 +60,23 @@ RRTNode::RRTNode() : Node("rrt_node"), max_iterations_(1000)
 
     dof_ = dof;
 
-    rrt_ = std::make_shared<rrt_core::RRT>(dof, urdf);
-    rrt_->setJointLimits(lower_limits_, upper_limits_);
+    // rrt_ = std::make_shared<rrt_core::RRT>(dof, urdf);
 
-    rrt_star_ = std::make_shared<rrt_core::RRTStar>(dof_, urdf);
-    rrt_star_->setJointLimits(lower_limits_, upper_limits_);
+    // rrt_->setJointLimits(lower_limits_, upper_limits_);
+    // rrt_->setStepSize(step_size);
+    // rrt_->setGoalBias(goal_bias);
+    // rrt_->setGoalTolerance(goal_tolerance);
+
+    // rrt_star_ = std::make_shared<rrt_core::RRTStar>(dof_, urdf);
+
+    // rrt_star_->setJointLimits(lower_limits_, upper_limits_);
+    // rrt_star_->setStepSize(step_size);
+    // rrt_star_->setGoalBias(goal_bias);
+    // rrt_star_->setGoalTolerance(goal_tolerance);
 
     smoother_ = std::make_shared<rrt_core::RuckigSmoother>(dof_, 0.01);
 
-    collision_checker_ = std::make_shared<collision::CheckCollision>(urdf); // only to compute path length, not used in RRT (can be used for future optimizations)
+    // collision_checker_ = std::make_shared<collision::CheckCollision>(urdf_); // only to compute path length
 
     RCLCPP_INFO(this->get_logger(), "RRT Node initialized. Waiting for goal...");
 }
@@ -72,19 +91,55 @@ void RRTNode::run(uint8_t planner_type)
     {
     case GoalCommand::RRT:
     {
-        RCLCPP_INFO(this->get_logger(), "Planner: RRT");
-        rrt_->setStart(q_start_);
-        rrt_->setGoal(q_goal_);
-        success = rrt_->plan(max_iterations_);
+        if (!rrt_) // construct only once
+        {
+            // RCLCPP_INFO(this->get_logger(), "Initializing RRT planner...");
+            rrt_ = std::make_shared<rrt_core::RRT>(dof_, urdf_);
+            rrt_->setJointLimits(lower_limits_, upper_limits_);
+            rrt_->setStepSize(step_size);
+            rrt_->setGoalBias(goal_bias);
+            rrt_->setGoalTolerance(goal_tolerance);
+        }
+
+        try
+        {
+            rrt_->setStart(q_start_);
+            rrt_->setGoal(q_goal_);
+            success = rrt_->plan(max_iterations_);
+        }
+        catch (const std::exception &e)
+        {
+            RCLCPP_ERROR(this->get_logger(), "Planning error: %s", e.what());
+            return;
+        }
+
         break;
     }
 
     case GoalCommand::RRT_STAR:
     {
-        RCLCPP_INFO(this->get_logger(), "Planner: RRT*");
-        rrt_star_->setStart(q_start_);
-        rrt_star_->setGoal(q_goal_);
-        success = rrt_star_->plan(max_iterations_);
+        if (!rrt_star_) // construct only once
+        {
+            // RCLCPP_INFO(this->get_logger(), "Initializing RRT* planner...");
+            rrt_star_ = std::make_shared<rrt_core::RRTStar>(dof_, urdf_);
+            rrt_star_->setJointLimits(lower_limits_, upper_limits_);
+            rrt_star_->setStepSize(step_size);
+            rrt_star_->setGoalBias(goal_bias);
+            rrt_star_->setGoalTolerance(goal_tolerance);
+        }
+
+        try
+        {
+            rrt_star_->setStart(q_start_);
+            rrt_star_->setGoal(q_goal_);
+            success = rrt_star_->plan(max_iterations_);
+        }
+        catch (const std::exception &e)
+        {
+            RCLCPP_ERROR(this->get_logger(), "Planning error: %s", e.what());
+            return;
+        }
+
         break;
     }
 
@@ -131,19 +186,22 @@ void RRTNode::run(uint8_t planner_type)
 
         // RCLCPP_INFO(this->get_logger(), "Trajectory duration: %.3f s, Points: %ld", traj.duration, path_.size());
 
-        for (size_t i = 0; i < path_.size(); ++i)
+        if (is_debug)
         {
-            std::ostringstream oss;
-            oss << "Waypoint " << i << ": [ ";
-
-            for (double val : path_[i])
+            for (size_t i = 0; i < path_.size(); ++i)
             {
-                oss << val << " ";
+                std::ostringstream oss;
+                oss << "Waypoint " << i << ": [ ";
+
+                for (double val : path_[i])
+                {
+                    oss << val << " ";
+                }
+
+                oss << "]";
+
+                RCLCPP_INFO(this->get_logger(), "%s", oss.str().c_str());
             }
-
-            oss << "]";
-
-            RCLCPP_INFO(this->get_logger(), "%s", oss.str().c_str());
         }
     }
     else
@@ -153,7 +211,7 @@ void RRTNode::run(uint8_t planner_type)
 
     tcp_path.clear();
 
-    double length = collision_checker_->computeCartesianPathLength(path_, tcp_path);
+    double length = rrt_->computePathLength(path_, tcp_path);
     publishTCPPath(tcp_path);
 
     RCLCPP_INFO(this->get_logger(), "Cartesian path length: %.4f meters, Planning time: %.3f ms", length, duration_ms);

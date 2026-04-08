@@ -6,6 +6,7 @@ namespace rrt_core
     {
         std::random_device rd;
         rng_ = std::mt19937(rd());
+        std::cout << "RRT Constructed with DOF: " << dof_ << std::endl;
     }
 
     void RRT::setStart(const std::vector<double> &q)
@@ -294,6 +295,14 @@ namespace rrt_core
 
     bool RRT::plan(int max_iter)
     {
+
+        std::cout << "[RRT] Planner parameters:" << std::endl;
+        std::cout << "  DOF: " << dof_ << std::endl;
+        std::cout << "  Step size: " << step_size_ << std::endl;
+        std::cout << "  Goal bias: " << goal_bias_ << std::endl;
+        std::cout << "  Goal tolerance: " << goal_tolerance_ << std::endl;
+        std::cout << "  Max iterations: " << max_iter << std::endl;
+
         // Safety checks
         if (q_start_.empty() || q_goal_.empty())
         {
@@ -372,6 +381,11 @@ namespace rrt_core
         return path;
     }
 
+    double RRT::computePathLength(const std::vector<std::vector<double>> &path, std::vector<Eigen::Vector3d> &tcp_points) 
+    {
+        return collision_checker_.computeCartesianPathLength(path, tcp_points);
+    }
+
     bool RRT::isCollisionFree(const std::vector<double> &q) const
     {
         if (collision_checker_.isStateValid(q))
@@ -384,5 +398,6 @@ namespace rrt_core
         }
         return collision_checker_.isStateValid(q);
     }
+
 
 } // namespace rrt_core

@@ -1,5 +1,13 @@
 rrt_node:
   ros__parameters:
+
+    debug: false
+
+    max_iterations: 100000
+    step_size: 0.1
+    goal_bias: 0.05
+    goal_tolerance: 0.1
+
     use_arm: panda_7dof
     robots:
       panda_7dof:

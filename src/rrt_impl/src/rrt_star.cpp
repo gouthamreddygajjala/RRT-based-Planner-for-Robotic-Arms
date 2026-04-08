@@ -7,6 +7,7 @@ namespace rrt_core
 {
     RRTStar::RRTStar(size_t dof, const std::string &urdf_path) : RRT(dof, urdf_path)
     {
+        std::cout << "RRT* Constructed with DOF: " << dof_ << std::endl;
     }
 
     void RRTStar::setRewireRadius(double r) { rewire_radius_ = r; }
@@ -54,6 +55,14 @@ namespace rrt_core
 
     bool RRTStar::plan(int max_iter)
     {
+
+        std::cout << "[RRT*] Planner parameters:" << std::endl;
+        std::cout << "  DOF: " << dof_ << std::endl;
+        std::cout << "  Step size: " << step_size_ << std::endl;
+        std::cout << "  Goal bias: " << goal_bias_ << std::endl;
+        std::cout << "  Goal tolerance: " << goal_tolerance_ << std::endl;
+        std::cout << "  Max iterations: " << max_iter << std::endl;
+
         // Safety checks
         if (q_start_.empty() || q_goal_.empty())
             throw std::runtime_error("Start or Goal not set");

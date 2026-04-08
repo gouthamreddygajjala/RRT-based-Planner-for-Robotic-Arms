@@ -74,12 +74,15 @@ namespace rrt_core
 
         void validateConfig(const std::vector<double> &q) const;
 
+        double computePathLength(const std::vector<std::vector<double>> &path, std::vector<Eigen::Vector3d> &tcp_points) ;
+
     private:
         KDTree kd_tree_;
 
         std::mt19937 rng_;
 
         collision::CheckCollision collision_checker_;
+        std::vector<Eigen::Vector3d> tcp_points;
     };
 
 } // namespace rrt_core
