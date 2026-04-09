@@ -1,5 +1,8 @@
 #pragma once
+
 #include "rrt_impl/rrt.hpp"
+#include <vector>
+#include <queue>
 
 namespace rrt_core
 {
@@ -18,8 +21,11 @@ namespace rrt_core
         std::vector<double> cost_;
 
         std::vector<int> getNeighbors(const std::vector<double> &q, double radius) const;
+
         double computeRadius() const;
-        void propagateCostUpdate(int parent_idx, double parent_cost);
+
+        // ✅ FIXED SIGNATURE
+        void propagateCostUpdate(int start_idx);
     };
 
 } // namespace rrt_core

@@ -4,8 +4,7 @@
 RRTNode::RRTNode() : Node("rrt_node")
 {
 
-    goal_sub_ = this->create_subscription<GoalCommand>("/goal_command", 10,
-                                                       std::bind(&RRTNode::goalCallback, this, std::placeholders::_1));
+    goal_sub_ = this->create_subscription<GoalCommand>("/goal_command", 10, std::bind(&RRTNode::goalCallback, this, std::placeholders::_1));
 
     tcp_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("/rrt_path", 10);
 
