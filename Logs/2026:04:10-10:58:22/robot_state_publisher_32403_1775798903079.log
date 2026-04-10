@@ -1,0 +1,14 @@
+[INFO] [1775798903.101457093] [robot_state_publisher]: got segment panda_hand
+[INFO] [1775798903.101530165] [robot_state_publisher]: got segment panda_leftfinger
+[INFO] [1775798903.101536036] [robot_state_publisher]: got segment panda_link0
+[INFO] [1775798903.101539193] [robot_state_publisher]: got segment panda_link1
+[INFO] [1775798903.101541772] [robot_state_publisher]: got segment panda_link2
+[INFO] [1775798903.101544426] [robot_state_publisher]: got segment panda_link3
+[INFO] [1775798903.101547098] [robot_state_publisher]: got segment panda_link4
+[INFO] [1775798903.101549749] [robot_state_publisher]: got segment panda_link5
+[INFO] [1775798903.101552352] [robot_state_publisher]: got segment panda_link6
+[INFO] [1775798903.101554855] [robot_state_publisher]: got segment panda_link7
+[INFO] [1775798903.101557285] [robot_state_publisher]: got segment panda_link8
+[INFO] [1775798903.101559663] [robot_state_publisher]: got segment panda_rightfinger
+[INFO] [1775798903.101562547] [robot_state_publisher]: got segment world
+[INFO] [1775798908.593173652] [rclcpp]: signal_handler(SIGINT/SIGTERM)

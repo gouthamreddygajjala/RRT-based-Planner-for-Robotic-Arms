@@ -1,0 +1,13 @@
+[INFO] [1775799068.872385221] [robot_state_publisher]: got segment panda_hand
+[INFO] [1775799068.872457032] [robot_state_publisher]: got segment panda_leftfinger
+[INFO] [1775799068.872463614] [robot_state_publisher]: got segment panda_link0
+[INFO] [1775799068.872466709] [robot_state_publisher]: got segment panda_link1
+[INFO] [1775799068.872469239] [robot_state_publisher]: got segment panda_link2
+[INFO] [1775799068.872471774] [robot_state_publisher]: got segment panda_link3
+[INFO] [1775799068.872474331] [robot_state_publisher]: got segment panda_link4
+[INFO] [1775799068.872476932] [robot_state_publisher]: got segment panda_link5
+[INFO] [1775799068.872479558] [robot_state_publisher]: got segment panda_link6
+[INFO] [1775799068.872482026] [robot_state_publisher]: got segment panda_link7
+[INFO] [1775799068.872484535] [robot_state_publisher]: got segment panda_link8
+[INFO] [1775799068.872486928] [robot_state_publisher]: got segment panda_rightfinger
+[INFO] [1775799068.872489593] [robot_state_publisher]: got segment world

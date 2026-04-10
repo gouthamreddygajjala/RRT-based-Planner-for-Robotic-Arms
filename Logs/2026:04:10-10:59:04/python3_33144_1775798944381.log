@@ -1,0 +1,4 @@
+[WARN] [1775798954.412690528] [spawner_arm_controller]: Failed getting a result from calling /controller_manager/list_controllers in 10.0. (Attempt 1 of 3.)
+[WARN] [1775798964.413867399] [spawner_arm_controller]: Failed getting a result from calling /controller_manager/list_controllers in 10.0. (Attempt 2 of 3.)
+[WARN] [1775798964.414585014] [spawner_arm_controller]: [93mController already loaded, skipping load_controller[0m
+[ERROR] [1775798964.415787100] [spawner_arm_controller]: [91mFailed to configure controller[0m

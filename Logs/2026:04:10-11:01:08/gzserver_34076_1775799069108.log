@@ -1,0 +1,81 @@
+[INFO] [1775799070.128181378] [gazebo_ros2_control]: Loading gazebo_ros2_control plugin
+[INFO] [1775799070.129553306] [gazebo_ros2_control]: Starting gazebo_ros2_control plugin in namespace: /
+[INFO] [1775799070.129635141] [gazebo_ros2_control]: Starting gazebo_ros2_control plugin in ros 2 node: gazebo_ros2_control
+[INFO] [1775799070.130389840] [gazebo_ros2_control]: connected to service!! robot_state_publisher
+[INFO] [1775799070.132092122] [gazebo_ros2_control]: Received urdf from param server, parsing...
+[INFO] [1775799070.132121623] [gazebo_ros2_control]: Loading parameter files /home/gautam/Music/my_ws/rrt_planning/install/robot_bringup/share/robot_bringup/config/controllers.yaml
+[INFO] [1775799070.137053058] [gazebo_ros2_control]: Loading joint: panda_joint1
+[INFO] [1775799070.137068551] [gazebo_ros2_control]: 	State:
+[INFO] [1775799070.137073496] [gazebo_ros2_control]: 		 position
+[INFO] [1775799070.137077885] [gazebo_ros2_control]: 		 velocity
+[INFO] [1775799070.137081396] [gazebo_ros2_control]: 	Command:
+[INFO] [1775799070.137085023] [gazebo_ros2_control]: 		 position
+[INFO] [1775799070.137178021] [gazebo_ros2_control]: Loading joint: panda_joint2
+[INFO] [1775799070.137183906] [gazebo_ros2_control]: 	State:
+[INFO] [1775799070.137187246] [gazebo_ros2_control]: 		 position
+[INFO] [1775799070.137190630] [gazebo_ros2_control]: 		 velocity
+[INFO] [1775799070.137193640] [gazebo_ros2_control]: 	Command:
+[INFO] [1775799070.137196668] [gazebo_ros2_control]: 		 position
+[INFO] [1775799070.137225433] [gazebo_ros2_control]: Loading joint: panda_joint3
+[INFO] [1775799070.137228877] [gazebo_ros2_control]: 	State:
+[INFO] [1775799070.137232041] [gazebo_ros2_control]: 		 position
+[INFO] [1775799070.137235150] [gazebo_ros2_control]: 		 velocity
+[INFO] [1775799070.137238200] [gazebo_ros2_control]: 	Command:
+[INFO] [1775799070.137241277] [gazebo_ros2_control]: 		 position
+[INFO] [1775799070.137265851] [gazebo_ros2_control]: Loading joint: panda_joint4
+[INFO] [1775799070.137269317] [gazebo_ros2_control]: 	State:
+[INFO] [1775799070.137272382] [gazebo_ros2_control]: 		 position
+[INFO] [1775799070.137275400] [gazebo_ros2_control]: 		 velocity
+[INFO] [1775799070.137278304] [gazebo_ros2_control]: 	Command:
+[INFO] [1775799070.137281316] [gazebo_ros2_control]: 		 position
+[INFO] [1775799070.137304695] [gazebo_ros2_control]: Loading joint: panda_joint5
+[INFO] [1775799070.137308017] [gazebo_ros2_control]: 	State:
+[INFO] [1775799070.137311411] [gazebo_ros2_control]: 		 position
+[INFO] [1775799070.137314931] [gazebo_ros2_control]: 		 velocity
+[INFO] [1775799070.137318409] [gazebo_ros2_control]: 	Command:
+[INFO] [1775799070.137321422] [gazebo_ros2_control]: 		 position
+[INFO] [1775799070.137344799] [gazebo_ros2_control]: Loading joint: panda_joint6
+[INFO] [1775799070.137347992] [gazebo_ros2_control]: 	State:
+[INFO] [1775799070.137351031] [gazebo_ros2_control]: 		 position
+[INFO] [1775799070.137353977] [gazebo_ros2_control]: 		 velocity
+[INFO] [1775799070.137356864] [gazebo_ros2_control]: 	Command:
+[INFO] [1775799070.137359852] [gazebo_ros2_control]: 		 position
+[INFO] [1775799070.137382421] [gazebo_ros2_control]: Loading joint: panda_joint7
+[INFO] [1775799070.137385631] [gazebo_ros2_control]: 	State:
+[INFO] [1775799070.137388635] [gazebo_ros2_control]: 		 position
+[INFO] [1775799070.137391637] [gazebo_ros2_control]: 		 velocity
+[INFO] [1775799070.137394529] [gazebo_ros2_control]: 	Command:
+[INFO] [1775799070.137397438] [gazebo_ros2_control]: 		 position
+[INFO] [1775799070.137419976] [gazebo_ros2_control]: Loading joint: panda_finger_joint1
+[INFO] [1775799070.137423521] [gazebo_ros2_control]: 	State:
+[INFO] [1775799070.137426608] [gazebo_ros2_control]: 		 position
+[INFO] [1775799070.137429714] [gazebo_ros2_control]: 		 velocity
+[INFO] [1775799070.137432691] [gazebo_ros2_control]: 	Command:
+[INFO] [1775799070.137435646] [gazebo_ros2_control]: 		 position
+[INFO] [1775799070.137470426] [gazebo_ros2_control]: Loading joint: panda_finger_joint2
+[INFO] [1775799070.137473854] [gazebo_ros2_control]: 	State:
+[INFO] [1775799070.137476891] [gazebo_ros2_control]: 		 position
+[INFO] [1775799070.137493736] [gazebo_ros2_control]: 		 velocity
+[INFO] [1775799070.137497060] [gazebo_ros2_control]: 	Command:
+[INFO] [1775799070.137500158] [gazebo_ros2_control]: 		 position
+[INFO] [1775799070.137544983] [resource_manager]: Initialize hardware 'panda_system' 
+[INFO] [1775799070.137605899] [resource_manager]: Successful initialization of hardware 'panda_system'
+[INFO] [1775799070.137646248] [resource_manager]: 'configure' hardware 'panda_system' 
+[INFO] [1775799070.137650812] [resource_manager]: Successful 'configure' of hardware 'panda_system'
+[INFO] [1775799070.137655612] [resource_manager]: 'activate' hardware 'panda_system' 
+[INFO] [1775799070.137658305] [resource_manager]: Successful 'activate' of hardware 'panda_system'
+[INFO] [1775799070.137696446] [gazebo_ros2_control]: Loading controller_manager
+[WARN] [1775799070.142256009] [gazebo_ros2_control]:  Desired controller update period (0.002 s) is slower than the gazebo simulation period (0.001 s).
+[INFO] [1775799070.142345074] [gazebo_ros2_control]: Loaded gazebo_ros2_control.
+[INFO] [1775799070.355203738] [controller_manager]: Loading controller 'arm_controller'
+[WARN] [1775799070.361785232] [arm_controller]: [Deprecated]: "allow_nonzero_velocity_at_trajectory_end" is set to true. The default behavior will change to false.
+[INFO] [1775799070.363824654] [controller_manager]: Configuring controller 'arm_controller'
+[INFO] [1775799070.364109839] [arm_controller]: No specific joint names are used for command interfaces. Using 'joints' parameter.
+[INFO] [1775799070.364147339] [arm_controller]: Command interfaces are [position] and state interfaces are [position velocity].
+[INFO] [1775799070.364181932] [arm_controller]: Using 'splines' interpolation method.
+[INFO] [1775799070.364729793] [arm_controller]: Controller state will be published at 100.00 Hz.
+[INFO] [1775799070.369656628] [arm_controller]: Goals with partial set of joints are allowed
+[INFO] [1775799070.369673584] [arm_controller]: Action status changes will be monitored at 20.00 Hz.
+[INFO] [1775799070.376415929] [controller_manager]: Loading controller 'joint_state_broadcaster'
+[INFO] [1775799070.381254837] [controller_manager]: Configuring controller 'joint_state_broadcaster'
+[INFO] [1775799070.381291037] [joint_state_broadcaster]: 'joints' or 'interfaces' parameter is empty. All available state interfaces will be published
