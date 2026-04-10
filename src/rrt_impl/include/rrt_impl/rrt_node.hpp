@@ -39,6 +39,9 @@ private:
 
     void publishTrajectory(const std::vector<std::vector<double>> &path);
 
+    void testIK();
+
+
     // --- RRT Core ---
     std::shared_ptr<rrt_core::RRT> rrt_;
     std::shared_ptr<rrt_core::RRTStar> rrt_star_;

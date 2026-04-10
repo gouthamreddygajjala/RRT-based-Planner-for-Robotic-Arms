@@ -126,6 +126,8 @@ void RRTNode::run(uint8_t planner_type)
         {
             rrt_->setStart(q_start_);
             rrt_->setGoal(q_goal_);
+            // testIK();
+
             success = rrt_->plan(max_iterations_);
         }
         catch (const std::exception &e)
@@ -240,6 +242,34 @@ void RRTNode::run(uint8_t planner_type)
     RCLCPP_INFO(this->get_logger(), "Cartesian path length: %.4f meters, Planning time: %.3f ms", length, duration_ms);
 }
 
+void RRTNode::testIK()
+{
+    geometry_msgs::msg::Pose test_pose;
+    test_pose.position.x = 0.30915;
+    test_pose.position.y = 0.0;
+    test_pose.position.z = 0.69374;
+
+    test_pose.orientation.w = 0.0019;
+    test_pose.orientation.x = 0.92485;
+    test_pose.orientation.y = -0.38015;
+    test_pose.orientation.z = 0.00185;
+
+    std::vector<double> q_ik;
+
+    if (rrt_->checkIK(test_pose, q_ik))
+    {
+        RCLCPP_INFO(this->get_logger(), "IK solution found:");
+        for (size_t i = 0; i < q_ik.size(); ++i)
+        {
+            RCLCPP_INFO(this->get_logger(), "  Joint %ld: %.4f", i, q_ik[i]);
+        }
+    }
+    else
+    {
+        RCLCPP_WARN(this->get_logger(), "IK solution not found for the given pose.");
+    }
+}
+
 void RRTNode::goalCallback(const GoalCommand::SharedPtr msg)
 {
     if (msg->goal.size() != static_cast<size_t>(dof_))
@@ -270,10 +300,9 @@ void RRTNode::publishTrajectory(const std::vector<std::vector<double>> &path)
     double time_from_start = 0.0;
     double dt = 0.2; // adjust based on speed
 
-
     for (size_t i = 0; i < path.size(); ++i)
     {
-    trajectory_msgs::msg::JointTrajectoryPoint point;
+        trajectory_msgs::msg::JointTrajectoryPoint point;
 
         point.positions = path[i];
 
@@ -291,7 +320,7 @@ void RRTNode::publishTrajectory(const std::vector<std::vector<double>> &path)
     // point.positions = path[path.size() - 1];
     // point.time_from_start = rclcpp::Duration::from_seconds(2.0);
     // traj.points.push_back(point);
-    
+
     traj_pub_->publish(traj);
 
     RCLCPP_INFO(this->get_logger(), "Published trajectory with %ld points.", path.size());

@@ -17,6 +17,9 @@
 // Pinocchio 3 collision API (replaces hpp/fcl direct include)
 #include <pinocchio/collision/collision.hpp>
 
+#include <geometry_msgs/msg/pose.hpp>
+#include <Eigen/Geometry>
+
 namespace collision
 {
     class CheckCollision
@@ -25,6 +28,8 @@ namespace collision
         explicit CheckCollision(const std::string &urdf_path);
         bool isStateValid(const std::vector<double> &q) const;
         double computeCartesianPathLength(const std::vector<std::vector<double>> &path, std::vector<Eigen::Vector3d> &tcp_points);
+
+        bool getIK(const geometry_msgs::msg::Pose &pose, std::vector<double> &q_out);
 
     private:
         pinocchio::Model model_;

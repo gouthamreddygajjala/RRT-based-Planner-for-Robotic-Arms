@@ -146,6 +146,106 @@ namespace collision
         return !in_collision;
     }
 
+    bool CheckCollision::getIK(const geometry_msgs::msg::Pose &pose, std::vector<double> &q_out)
+    {
+        const int max_iters = 200;
+        const double eps = 1e-4;
+        const double lambda = 1e-3;
+        const double max_step = 0.5;
+
+        // --- Convert Pose → Eigen ---
+        Eigen::Vector3d target_pos(pose.position.x,
+                                   pose.position.y,
+                                   pose.position.z);
+
+        Eigen::Quaterniond q_target(pose.orientation.w,
+                                    pose.orientation.x,
+                                    pose.orientation.y,
+                                    pose.orientation.z);
+
+        Eigen::Matrix3d target_rot = q_target.toRotationMatrix();
+
+        // --- Initial guess ---
+        Eigen::VectorXd q = Eigen::VectorXd::Zero(dof_);
+
+        for (int iter = 0; iter < max_iters; ++iter)
+        {
+            // FK
+            pinocchio::forwardKinematics(model_, data_, q);
+            pinocchio::updateFramePlacements(model_, data_);
+
+            const auto &frame = data_.oMf[ee_frame_id_];
+
+            Eigen::Vector3d curr_pos = frame.translation();
+            Eigen::Matrix3d curr_rot = frame.rotation();
+
+            // --- Position error ---
+            Eigen::Vector3d pos_err = target_pos - curr_pos;
+
+            // --- Orientation error ---
+            Eigen::Matrix3d R_err = target_rot * curr_rot.transpose();
+            Eigen::AngleAxisd aa(R_err);
+            Eigen::Vector3d rot_err = aa.axis() * aa.angle();
+
+            // --- Combined error ---
+            Eigen::Matrix<double, 6, 1> error;
+            error.head<3>() = pos_err;
+            error.tail<3>() = rot_err;
+
+            if (error.norm() < eps)
+            {
+                // ✅ Only check collision on the FINAL solution
+                std::vector<double> q_vec(q.data(), q.data() + q.size());
+                if (!isStateValid(q_vec))
+                {
+                    std::cout << "[IK] ✓ Converged but solution is in collision\n";
+                    return false;
+                }
+
+                q_out.assign(q.data(), q.data() + q.size());
+                std::cout << "[IK] ✓ Success (collision-free)\n";
+                return true;
+            }
+
+            // --- Jacobian ---
+            Eigen::MatrixXd J(6, dof_);
+            pinocchio::computeFrameJacobian(
+                model_, data_, q,
+                ee_frame_id_,
+                pinocchio::LOCAL_WORLD_ALIGNED,
+                J);
+
+            // --- Damped Least Squares ---
+            Eigen::MatrixXd JJt = J * J.transpose();
+            Eigen::MatrixXd damping =
+                lambda * lambda * Eigen::MatrixXd::Identity(6, 6);
+
+            Eigen::VectorXd dq =
+                J.transpose() * (JJt + damping).ldlt().solve(error);
+
+            // --- Step size limiting ---
+            double alpha = 1.0;
+            if (dq.norm() > max_step)
+            {
+                alpha = max_step / dq.norm();
+            }
+
+            // --- Update ---
+            q += alpha * dq;
+
+            // --- Clamp to joint limits ---
+            for (int i = 0; i < dof_; ++i)
+            {
+                q[i] = std::clamp(q[i],
+                                  model_.lowerPositionLimit[i],
+                                  model_.upperPositionLimit[i]);
+            }
+        }
+
+        std::cout << "[IK] ❌ Failed to converge\n";
+        return false;
+    }
+
     double CheckCollision::computeCartesianPathLength(const std::vector<std::vector<double>> &path,
                                                       std::vector<Eigen::Vector3d> &tcp_points)
     {

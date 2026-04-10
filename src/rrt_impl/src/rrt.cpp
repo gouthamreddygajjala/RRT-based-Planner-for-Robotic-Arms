@@ -386,6 +386,11 @@ namespace rrt_core
         return collision_checker_.computeCartesianPathLength(path, tcp_points);
     }
 
+    double RRT::checkIK(const geometry_msgs::msg::Pose &pose, std::vector<double> &q_out)
+    {
+        return collision_checker_.getIK(pose, q_out);
+    }
+
     bool RRT::isCollisionFree(const std::vector<double> &q) const
     {
         if (collision_checker_.isStateValid(q))

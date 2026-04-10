@@ -10,7 +10,7 @@
 
 #include "rrt_impl/check_collision.hpp"
 #include "kd_tree.hpp"
-
+#include <geometry_msgs/msg/pose.hpp>
 
 namespace rrt_core
 {
@@ -76,6 +76,8 @@ namespace rrt_core
         void validateConfig(const std::vector<double> &q) const;
 
         double computePathLength(const std::vector<std::vector<double>> &path, std::vector<Eigen::Vector3d> &tcp_points);
+
+        double checkIK(const geometry_msgs::msg::Pose &pose, std::vector<double> &q_out);
 
         KDTree kd_tree_;
 
