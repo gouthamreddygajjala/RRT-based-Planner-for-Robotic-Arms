@@ -8,8 +8,10 @@
 #include <vector>
 #include <string>
 #include "std_msgs/msg/float64_multi_array.hpp"
+#include <trajectory_msgs/msg/joint_trajectory.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
+#include <sensor_msgs/msg/joint_state.hpp>
 #include "custom_msgs/msg/goal_command.hpp"
 #include <chrono>
 
@@ -28,16 +30,22 @@ private:
     void run(uint8_t planner_type);
 
     rclcpp::Subscription<GoalCommand>::SharedPtr goal_sub_;
+    rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_state_sub_;
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr tcp_pub_;
+    rclcpp::Publisher<trajectory_msgs::msg::JointTrajectory>::SharedPtr traj_pub_;
 
     void goalCallback(const GoalCommand::SharedPtr msg);
     void publishTCPPath(const std::vector<Eigen::Vector3d> &tcp_path);
+
+    void publishTrajectory(const std::vector<std::vector<double>> &path);
 
     // --- RRT Core ---
     std::shared_ptr<rrt_core::RRT> rrt_;
     std::shared_ptr<rrt_core::RRTStar> rrt_star_;
 
     std::shared_ptr<collision::CheckCollision> collision_checker_;
+
+    std::vector<std::string> joint_names_;
 
     // --- Configurations ---
     std::vector<double> q_start_;

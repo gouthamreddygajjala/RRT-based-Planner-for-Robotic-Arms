@@ -13,6 +13,7 @@ rrt_node:
       panda_7dof:
         dof: 7
         urdf: "/home/gautam/Music/my_ws/rrt_planning/src/robot_description/panda.urdf"
+        joint_names: [panda_joint1, panda_joint2, panda_joint3, panda_joint4, panda_joint5, panda_joint6, panda_joint7]
         joint_limits:
           lower: [-2.9, -1.8, -2.9, -3.1, -2.9, -0.08, -2.9]
           upper: [2.9, 1.8, 2.9, 0.08, 2.9, 3.8, 2.9]

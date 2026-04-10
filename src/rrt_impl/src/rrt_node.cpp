@@ -7,6 +7,7 @@ RRTNode::RRTNode() : Node("rrt_node")
     goal_sub_ = this->create_subscription<GoalCommand>("/goal_command", 10, std::bind(&RRTNode::goalCallback, this, std::placeholders::_1));
 
     tcp_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("/rrt_path", 10);
+    traj_pub_ = this->create_publisher<trajectory_msgs::msg::JointTrajectory>("/arm_controller/joint_trajectory", 10);
 
     this->declare_parameter<std::string>("use_arm", "");
     std::string use_arm = this->get_parameter("use_arm").as_string();
@@ -38,6 +39,27 @@ RRTNode::RRTNode() : Node("rrt_node")
     step_size = this->get_parameter("step_size").as_double();
     goal_bias = this->get_parameter("goal_bias").as_double();
     goal_tolerance = this->get_parameter("goal_tolerance").as_double();
+
+    this->declare_parameter<std::vector<std::string>>(prefix + "joint_names", {});
+    joint_names_ = this->get_parameter(prefix + "joint_names").as_string_array();
+
+    joint_state_sub_ = this->create_subscription<sensor_msgs::msg::JointState>("/joint_states", 10, [this](const sensor_msgs::msg::JointState::SharedPtr msg)
+                                                                               {
+        q_start_.clear();
+        for (const auto &name : joint_names_)
+        {
+            auto it = std::find(msg->name.begin(), msg->name.end(), name);
+            if (it != msg->name.end())
+            {
+                size_t index = std::distance(msg->name.begin(), it);
+                q_start_.push_back(msg->position[index]);
+            }
+            else
+            {
+                RCLCPP_WARN(this->get_logger(), "Joint %s not found in joint states!", name.c_str());
+                q_start_.push_back(0.0); // default to 0 if not found
+            }
+        } });
 
     if (use_arm.empty())
     {
@@ -210,6 +232,8 @@ void RRTNode::run(uint8_t planner_type)
 
     tcp_path.clear();
 
+    publishTrajectory(path_);
+
     double length = rrt_->computePathLength(path_, tcp_path);
     publishTCPPath(tcp_path);
 
@@ -228,6 +252,49 @@ void RRTNode::goalCallback(const GoalCommand::SharedPtr msg)
 
     RCLCPP_INFO(this->get_logger(), "Received goal. Planner type: %d. Starting planning...", static_cast<int>(msg->planner_type));
     run(msg->planner_type);
+}
+
+void RRTNode::publishTrajectory(const std::vector<std::vector<double>> &path)
+{
+    if (path.empty())
+    {
+        RCLCPP_WARN(this->get_logger(), "Empty path, not publishing trajectory.");
+        return;
+    }
+
+    trajectory_msgs::msg::JointTrajectory traj;
+
+    // traj.header.stamp = this->now();
+    traj.joint_names = joint_names_;
+
+    double time_from_start = 0.0;
+    double dt = 0.2; // adjust based on speed
+
+
+    for (size_t i = 0; i < path.size(); ++i)
+    {
+    trajectory_msgs::msg::JointTrajectoryPoint point;
+
+        point.positions = path[i];
+
+        // Optional (recommended if using smoother later)
+        // point.velocities.resize(dof_, 0.0);
+        // point.accelerations.resize(dof_, 0.0);
+
+        point.time_from_start = rclcpp::Duration::from_seconds(time_from_start);
+        time_from_start += dt;
+
+        traj.points.push_back(point);
+    }
+
+    // trajectory_msgs::msg::JointTrajectoryPoint point;
+    // point.positions = path[path.size() - 1];
+    // point.time_from_start = rclcpp::Duration::from_seconds(2.0);
+    // traj.points.push_back(point);
+    
+    traj_pub_->publish(traj);
+
+    RCLCPP_INFO(this->get_logger(), "Published trajectory with %ld points.", path.size());
 }
 
 void RRTNode::publishTCPPath(const std::vector<Eigen::Vector3d> &tcp_path)

@@ -11,6 +11,7 @@
 #include "rrt_impl/check_collision.hpp"
 #include "kd_tree.hpp"
 
+
 namespace rrt_core
 {
 

@@ -5,7 +5,7 @@ from platform import node
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
-from launch.actions import RegisterEventHandler,     IncludeLaunchDescription, DeclareLaunchArgument
+from launch.actions import RegisterEventHandler,     IncludeLaunchDescription, DeclareLaunchArgument, ExecuteProcess
 from launch.event_handlers import OnProcessExit
 from launch.substitutions import Command, FindExecutable, PathJoinSubstitution, LaunchConfiguration
 
@@ -73,15 +73,28 @@ def generate_launch_description():
                  arguments=['-topic', 'robot_description',
                              '-entity', 'panda_7dof'],
                  output='screen')
+    
+    
+    rrt_node = Node(
+        package='rrt_impl',
+        executable='rrt_node',
+        output='screen',
+        parameters=[os.path.join(get_package_share_directory('rrt_impl'), 'config', 'robot_config.yaml')]
+    )   
 
-
+    gui = ExecuteProcess(
+            cmd=['python3', os.path.join(get_package_share_directory('rrt_impl'), '/home/gautam/Music/my_ws/rrt_planning/src/rrt_impl/src/gui.py')],
+            output='screen'
+        )
 
     nodes = [
         gzserver_cmd,
         gzclient_cmd,
         spawn_entity,
-        robot_state_pub_node,
+        robot_state_pub_node,   
         core_launch,
+        rrt_node,
+        gui,
     ]
 
-    return LaunchDescription(declared_arguments +nodes)
+    return LaunchDescription(declared_arguments + nodes)

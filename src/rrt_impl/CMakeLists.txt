@@ -14,12 +14,14 @@ find_package(nav_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(trajectory_msgs REQUIRED)
 
 find_package(pinocchio REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(hpp-fcl REQUIRED)
 find_package(ruckig REQUIRED)
 find_package(custom_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
 
 # ================= Include =================
@@ -52,6 +54,8 @@ ament_target_dependencies(rrt_core
   std_msgs
   visualization_msgs
   custom_msgs
+  trajectory_msgs
+  sensor_msgs
 )
 
 add_executable(rrt_node src/rrt_node.cpp)
