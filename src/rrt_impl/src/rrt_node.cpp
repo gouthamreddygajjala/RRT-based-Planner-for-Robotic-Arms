@@ -121,21 +121,7 @@ void RRTNode::run(uint8_t planner_type)
             rrt_->setGoalBias(goal_bias);
             rrt_->setGoalTolerance(goal_tolerance);
         }
-
-        try
-        {
-            rrt_->setStart(q_start_);
-            rrt_->setGoal(q_goal_);
-            // testIK();
-
-            success = rrt_->plan(max_iterations_);
-        }
-        catch (const std::exception &e)
-        {
-            RCLCPP_ERROR(this->get_logger(), "Planning error: %s", e.what());
-            return;
-        }
-
+        planner_ = rrt_;
         break;
     }
 
@@ -150,19 +136,7 @@ void RRTNode::run(uint8_t planner_type)
             rrt_star_->setGoalBias(goal_bias);
             rrt_star_->setGoalTolerance(goal_tolerance);
         }
-
-        try
-        {
-            rrt_star_->setStart(q_start_);
-            rrt_star_->setGoal(q_goal_);
-            success = rrt_star_->plan(max_iterations_);
-        }
-        catch (const std::exception &e)
-        {
-            RCLCPP_ERROR(this->get_logger(), "Planning error: %s", e.what());
-            return;
-        }
-
+        planner_ = rrt_star_;
         break;
     }
 
@@ -177,31 +151,46 @@ void RRTNode::run(uint8_t planner_type)
             rrt_connect_->setGoalBias(goal_bias);
             rrt_connect_->setGoalTolerance(goal_tolerance);
         }
-
-        try
-        {
-            rrt_connect_->setStart(q_start_);
-            rrt_connect_->setGoal(q_goal_);
-            success = rrt_connect_->plan(max_iterations_);
-        }
-        catch (const std::exception &e)
-        {
-            RCLCPP_ERROR(this->get_logger(), "Planning error: %s", e.what());
-            return;
-        }
-
+        planner_ = rrt_connect_;
         break;
     }
 
     default:
     {
-        RCLCPP_WARN(this->get_logger(),
-                    "Unknown planner type %d. Falling back to RRT.", planner_type);
-        rrt_->setStart(q_start_);
-        rrt_->setGoal(q_goal_);
-        success = rrt_->plan(max_iterations_);
+        RCLCPP_WARN(this->get_logger(), "Unknown planner type %d. Falling back to RRT.", planner_type);
+
+        if (!rrt_)
+        {
+            rrt_ = std::make_shared<rrt_core::RRT>(dof_, urdf_);
+            rrt_->setJointLimits(lower_limits_, upper_limits_);
+            rrt_->setStepSize(step_size);
+            rrt_->setGoalBias(goal_bias);
+            rrt_->setGoalTolerance(goal_tolerance);
+        }
+
+        planner_ = rrt_;
         break;
     }
+    }
+
+    if (!planner_)
+    {
+        RCLCPP_ERROR(this->get_logger(), "Planner not initialized!");
+        return;
+    }
+
+    try
+    {
+        planner_->setStart(q_start_);
+        planner_->setGoal(q_goal_);
+        // testIK();
+
+        success = planner_->plan(max_iterations_);
+    }
+    catch (const std::exception &e)
+    {
+        RCLCPP_ERROR(this->get_logger(), "Planning error: %s", e.what());
+        return;
     }
 
     auto end_time = std::chrono::high_resolution_clock::now();
@@ -209,21 +198,15 @@ void RRTNode::run(uint8_t planner_type)
 
     if (success)
     {
+        std::cout << "planner_: " << planner_.get() << std::endl;
+        std::cout << "rrt_: " << rrt_.get() << std::endl;
+        std::cout << "rrt_star_: " << rrt_star_.get() << std::endl;
+        std::cout << "rrt_connect_: " << rrt_connect_.get() << std::endl;
+        
         RCLCPP_INFO(this->get_logger(), "Path found!");
 
-        if (planner_type == GoalCommand::RRT)
-        {
-            path_ = rrt_->getPath();
-        }
-        else if (planner_type == GoalCommand::RRT_STAR)
-        {
-            path_ = rrt_star_->getPath();
-        }
-        else if (planner_type == GoalCommand::RRT_CONNECT)
-        {
-            path_ = rrt_connect_->getPath();
-        }
-        
+        path_ = planner_->getPath();
+
         // path_ = rrt_->shortcutPath(path_);
         // path_ = rrt_->interpolatePath(path_, 200); // cubic spline, doesnt work
 
@@ -263,7 +246,7 @@ void RRTNode::run(uint8_t planner_type)
 
     publishTrajectory(path_);
 
-    double length = rrt_->computePathLength(path_, tcp_path);
+    double length = planner_->computePathLength(path_, tcp_path);
     publishTCPPath(tcp_path);
 
     RCLCPP_INFO(this->get_logger(), "Cartesian path length: %.4f meters, Planning time: %.3f ms", length, duration_ms);
@@ -321,8 +304,14 @@ void RRTNode::publishTrajectory(const std::vector<std::vector<double>> &path)
 
     // ---- Step 1: Compute TCP path ----
     std::vector<Eigen::Vector3d> tcp_path_local;
-    double total_length = rrt_->computePathLength(path, tcp_path_local);
 
+    if (!planner_)
+    {
+        RCLCPP_ERROR(this->get_logger(), "Planner is null in publishTrajectory!");
+        return;
+    }
+
+    double total_length = planner_->computePathLength(path, tcp_path_local);
     if (total_length <= 1e-6)
     {
         RCLCPP_WARN(this->get_logger(), "Path length too small.");
@@ -334,6 +323,14 @@ void RRTNode::publishTrajectory(const std::vector<std::vector<double>> &path)
     std::vector<Eigen::Vector3d> clean_tcp;
 
     const double min_dist = 1e-5;
+
+    if (tcp_path_local.size() != path.size())
+    {
+        RCLCPP_ERROR(this->get_logger(),
+                     "TCP path mismatch! tcp: %ld vs path: %ld",
+                     tcp_path_local.size(), path.size());
+        return;
+    }
 
     clean_path.push_back(path[0]);
     clean_tcp.push_back(tcp_path_local[0]);

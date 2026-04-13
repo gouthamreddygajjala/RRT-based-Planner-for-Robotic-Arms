@@ -44,6 +44,9 @@ private:
 
 
     // --- RRT Core ---
+
+    std::shared_ptr<rrt_core::RRT> planner_;
+
     std::shared_ptr<rrt_core::RRT> rrt_;
     std::shared_ptr<rrt_core::RRTStar> rrt_star_;
     std::shared_ptr<rrt_core::RRTConnect> rrt_connect_;
