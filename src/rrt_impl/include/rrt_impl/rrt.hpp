@@ -19,6 +19,7 @@ namespace rrt_core
     {
         std::vector<double> q;
         int parent_index;
+        // std::vector<int> children; 
     };
 
     class RRT

@@ -292,39 +292,142 @@ void RRTNode::publishTrajectory(const std::vector<std::vector<double>> &path)
         return;
     }
 
-    trajectory_msgs::msg::JointTrajectory traj;
+    // ---- Step 1: Compute TCP path ----
+    std::vector<Eigen::Vector3d> tcp_path_local;
+    double total_length = rrt_->computePathLength(path, tcp_path_local);
 
-    // traj.header.stamp = this->now();
+    if (total_length <= 1e-6)
+    {
+        RCLCPP_WARN(this->get_logger(), "Path length too small.");
+        return;
+    }
+
+    // ---- Step 2: Remove duplicate / tiny segments (IMPORTANT for RRT*) ----
+    std::vector<std::vector<double>> clean_path;    //if consecutive points have same timestamps, the controller may ignore them, 
+    std::vector<Eigen::Vector3d> clean_tcp;
+
+    const double min_dist = 1e-5;
+
+    clean_path.push_back(path[0]);
+    clean_tcp.push_back(tcp_path_local[0]);
+
+    for (size_t i = 1; i < path.size(); ++i)
+    {
+        double dist = (tcp_path_local[i] - tcp_path_local[i - 1]).norm();
+
+        if (dist > min_dist)
+        {
+            clean_path.push_back(path[i]);
+            clean_tcp.push_back(tcp_path_local[i]);
+        }
+    }
+
+    if (clean_path.size() < 2)
+    {
+        RCLCPP_WARN(this->get_logger(), "Path collapsed after filtering.");
+        return;
+    }
+
+    // ---- Step 3: Recompute total length after cleanup ----
+    double clean_length = 0.0;
+    for (size_t i = 1; i < clean_tcp.size(); ++i)
+    {
+        clean_length += (clean_tcp[i] - clean_tcp[i - 1]).norm();
+    }
+
+    // ---- Step 4: Define Cartesian speed ----
+    double cartesian_speed = 0.2; // m/s
+    double total_time = clean_length / cartesian_speed;
+
+    trajectory_msgs::msg::JointTrajectory traj;
     traj.joint_names = joint_names_;
 
-    double time_from_start = 0.0;
-    double dt = 0.2; // adjust based on speed
+    double accumulated_time = 1e-3; // small epsilon (avoid 0)
 
-    for (size_t i = 0; i < path.size(); ++i)
+    const double min_dt = 1e-3; // ensure strictly increasing
+
+    for (size_t i = 0; i < clean_path.size(); ++i)
     {
         trajectory_msgs::msg::JointTrajectoryPoint point;
+        point.positions = clean_path[i];
 
-        point.positions = path[i];
+        // Optional (recommended)
+        point.velocities.resize(dof_, 0.0);
 
-        // Optional (recommended if using smoother later)
-        // point.velocities.resize(dof_, 0.0);
-        // point.accelerations.resize(dof_, 0.0);
+        if (i > 0)
+        {
+            double segment_length =
+                (clean_tcp[i] - clean_tcp[i - 1]).norm();
 
-        point.time_from_start = rclcpp::Duration::from_seconds(time_from_start);
-        time_from_start += dt;
+            double segment_time =
+                (segment_length / std::max(clean_length, 1e-6)) * total_time;
+
+            // 🔥 Critical fix
+            segment_time = std::max(segment_time, min_dt);
+
+            accumulated_time += segment_time;
+        }
+
+        // 🔥 Ensure last point exactly matches total_time
+        if (i == clean_path.size() - 1)
+        {
+            accumulated_time = std::max(accumulated_time, total_time);
+        }
+
+        point.time_from_start =
+            rclcpp::Duration::from_seconds(accumulated_time);
 
         traj.points.push_back(point);
     }
 
-    // trajectory_msgs::msg::JointTrajectoryPoint point;
-    // point.positions = path[path.size() - 1];
-    // point.time_from_start = rclcpp::Duration::from_seconds(2.0);
-    // traj.points.push_back(point);
-
     traj_pub_->publish(traj);
 
-    RCLCPP_INFO(this->get_logger(), "Published trajectory with %ld points.", path.size());
+    RCLCPP_INFO(this->get_logger(),
+                "Published trajectory | Length: %.3f m | Time: %.3f s | Points: %ld -> %ld",
+                clean_length, total_time, path.size(), clean_path.size());
 }
+
+// void RRTNode::publishTrajectory(const std::vector<std::vector<double>> &path)
+// {
+//     if (path.empty())
+//     {
+//         RCLCPP_WARN(this->get_logger(), "Empty path, not publishing trajectory.");
+//         return;
+//     }
+
+//     trajectory_msgs::msg::JointTrajectory traj;
+
+//     // traj.header.stamp = this->now();
+//     traj.joint_names = joint_names_;
+
+//     double time_from_start = 0.0;
+//     double dt = 0.2; // adjust based on speed
+
+//     for (size_t i = 0; i < path.size(); ++i)
+//     {
+//         trajectory_msgs::msg::JointTrajectoryPoint point;
+
+//         point.positions = path[i];
+
+//         // Optional (recommended if using smoother later)
+//         // point.velocities.resize(dof_, 0.0);
+//         // point.accelerations.resize(dof_, 0.0);
+
+//         point.time_from_start = rclcpp::Duration::from_seconds(time_from_start);
+//         time_from_start += dt;
+
+//         traj.points.push_back(point);
+//     }
+
+//     // trajectory_msgs::msg::JointTrajectoryPoint point;
+//     // point.positions = path[path.size() - 1];
+//     // point.time_from_start = rclcpp::Duration::from_seconds(2.0);
+//     // traj.points.push_back(point);
+
+//     traj_pub_->publish(traj);
+
+//     RCLCPP_INFO(this->get_logger(), "Published trajectory with %ld points.", path.size());
+// }
 
 void RRTNode::publishTCPPath(const std::vector<Eigen::Vector3d> &tcp_path)
 {
