@@ -1,81 +1,52 @@
 #pragma once
 
-#include <vector>
-#include <random>
-
-#include <limits>
-#include <cmath>
-#include <algorithm>
-#include <stdexcept>
-
-#include "rrt_impl/check_collision.hpp"
+#include "rrt_impl/rrt.hpp"
 
 namespace rrt_core
 {
 
-    struct RRTNode
-    {
-        std::vector<double> q;
-        int parent_index;
-    };
-
-    class RRT
+    class RRTConnect : public RRT
     {
     public:
-        explicit RRT(size_t dof, const std::string& urdf_path);
+        explicit RRTConnect(size_t dof, const std::string &urdf_path);
 
-        void setStart(const std::vector<double> &q);
-        void setGoal(const std::vector<double> &q);
+        // Main planner
+        bool plan(int max_iter) override;
 
-        void setJointLimits(const std::vector<double> &lower,
-                            const std::vector<double> &upper);
-
-        void setStepSize(double step);
-        void setGoalBias(double bias);
-        void setGoalTolerance(double tol);
-
-        void reserve(size_t n);
-
-        bool plan(int max_iter);
-        std::vector<std::vector<double>> getPath() const;
-
-        const std::vector<RRTNode> &getNodes() const;
+        std::vector<std::vector<double>> getPath() const override;
 
     private:
-        std::vector<double> sampleRandomConfig();
-        int getNearestNode(const std::vector<double> &q);
-        std::vector<double> steer(const std::vector<double> &q_near,
-                                  const std::vector<double> &q_rand);
+        // ================= INTERNAL TREE =================
+        struct Tree
+        {
+            std::vector<RRTNode> nodes;
+            KDTree kd_tree;
 
-        double distance(const std::vector<double> &a,
-                        const std::vector<double> &b) const;
+            Tree(size_t dof) : kd_tree(dof) {}
+        };
 
-        bool isCollisionFree(const std::vector<double> &q) const;
-        bool isEdgeCollisionFree(const std::vector<double> &q1,
-                                 const std::vector<double> &q2) const;
+        // ================= EXTEND STATUS =================
+        enum class ExtendStatus
+        {
+            TRAPPED,
+            ADVANCED,
+            REACHED
+        };
 
-        void validateConfig(const std::vector<double> &q) const;
+        // ================= CORE METHODS =================
+        ExtendStatus extend(Tree &tree,
+                            const std::vector<double> &q_target,
+                            int &new_idx);
 
-    private:
-        size_t dof_;
+        ExtendStatus connect(Tree &tree,
+                             const std::vector<double> &q_target,
+                             int &new_idx);
 
-        std::vector<RRTNode> nodes_;
+        void buildFinalPath(Tree &Ta, int idxA,
+                            Tree &Tb, int idxB);
 
-        std::vector<double> q_start_;
-        std::vector<double> q_goal_;
-
-        std::vector<double> lower_limits_;
-        std::vector<double> upper_limits_;
-
-        double step_size_{0.06};  //0.1
-        double goal_bias_{0.1};
-        double goal_tolerance_{0.1};
-
-        int goal_index_{-1};
-
-        std::mt19937 rng_;
-
-        collision::CheckCollision collision_checker_;
+        // ================= FINAL PATH =================
+        std::vector<std::vector<double>> final_path_;
     };
 
 } // namespace rrt_core

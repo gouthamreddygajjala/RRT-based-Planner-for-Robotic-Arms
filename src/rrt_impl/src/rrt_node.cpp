@@ -168,12 +168,28 @@ void RRTNode::run(uint8_t planner_type)
 
     case GoalCommand::RRT_CONNECT:
     {
-        // Not implemented yet — fall through to warning
-        RCLCPP_WARN(this->get_logger(), "RRT-Connect (type %d) is not implemented yet. Falling back to RRT.",
-                    planner_type);
-        rrt_->setStart(q_start_);
-        rrt_->setGoal(q_goal_);
-        success = rrt_->plan(max_iterations_);
+        if (!rrt_connect_) // construct only once
+        {
+            // RCLCPP_INFO(this->get_logger(), "Initializing RRT-Connect planner...");
+            rrt_connect_ = std::make_shared<rrt_core::RRTConnect>(dof_, urdf_);
+            rrt_connect_->setJointLimits(lower_limits_, upper_limits_);
+            rrt_connect_->setStepSize(step_size);
+            rrt_connect_->setGoalBias(goal_bias);
+            rrt_connect_->setGoalTolerance(goal_tolerance);
+        }
+
+        try
+        {
+            rrt_connect_->setStart(q_start_);
+            rrt_connect_->setGoal(q_goal_);
+            success = rrt_connect_->plan(max_iterations_);
+        }
+        catch (const std::exception &e)
+        {
+            RCLCPP_ERROR(this->get_logger(), "Planning error: %s", e.what());
+            return;
+        }
+
         break;
     }
 
@@ -195,8 +211,19 @@ void RRTNode::run(uint8_t planner_type)
     {
         RCLCPP_INFO(this->get_logger(), "Path found!");
 
-        path_ = (planner_type == GoalCommand::RRT_STAR) ? rrt_star_->getPath()
-                                                        : rrt_->getPath();
+        if (planner_type == GoalCommand::RRT)
+        {
+            path_ = rrt_->getPath();
+        }
+        else if (planner_type == GoalCommand::RRT_STAR)
+        {
+            path_ = rrt_star_->getPath();
+        }
+        else if (planner_type == GoalCommand::RRT_CONNECT)
+        {
+            path_ = rrt_connect_->getPath();
+        }
+        
         // path_ = rrt_->shortcutPath(path_);
         // path_ = rrt_->interpolatePath(path_, 200); // cubic spline, doesnt work
 
@@ -303,7 +330,7 @@ void RRTNode::publishTrajectory(const std::vector<std::vector<double>> &path)
     }
 
     // ---- Step 2: Remove duplicate / tiny segments (IMPORTANT for RRT*) ----
-    std::vector<std::vector<double>> clean_path;    //if consecutive points have same timestamps, the controller may ignore them, 
+    std::vector<std::vector<double>> clean_path; // if consecutive points have same timestamps, the controller may ignore them,
     std::vector<Eigen::Vector3d> clean_tcp;
 
     const double min_dist = 1e-5;

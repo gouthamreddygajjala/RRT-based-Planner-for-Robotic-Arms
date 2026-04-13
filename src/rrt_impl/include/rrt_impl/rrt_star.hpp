@@ -12,7 +12,7 @@ namespace rrt_core
         RRTStar(size_t dof, const std::string &urdf_path);
 
         void setRewireRadius(double r);
-        bool plan(int max_iter);
+        bool plan(int max_iter) override;
 
         double getCost(int idx) const;
 

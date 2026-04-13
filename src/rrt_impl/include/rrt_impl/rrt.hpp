@@ -19,12 +19,14 @@ namespace rrt_core
     {
         std::vector<double> q;
         int parent_index;
-        // std::vector<int> children; 
+        // std::vector<int> children;
     };
 
     class RRT
     {
     public:
+        virtual ~RRT() = default;
+
         explicit RRT(size_t dof, const std::string &urdf_path);
 
         void setStart(const std::vector<double> &q);
@@ -39,8 +41,8 @@ namespace rrt_core
 
         void reserve(size_t n);
 
-        bool plan(int max_iter);
-        std::vector<std::vector<double>> getPath() const;
+        virtual bool plan(int max_iter);
+        virtual std::vector<std::vector<double>> getPath() const;
 
         const std::vector<RRTNode> &getNodes() const;
 

@@ -36,6 +36,7 @@ include_directories(
 add_library(rrt_core
   src/rrt.cpp
   src/rrt_star.cpp
+  src/rrt_connect.cpp
   src/check_collision.cpp
 )
 

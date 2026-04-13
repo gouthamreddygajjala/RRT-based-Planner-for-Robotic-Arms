@@ -4,6 +4,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rrt_impl/rrt.hpp"
 #include "rrt_impl/rrt_star.hpp"
+#include "rrt_impl/rrt_connect.hpp"
 
 #include <vector>
 #include <string>
@@ -45,6 +46,7 @@ private:
     // --- RRT Core ---
     std::shared_ptr<rrt_core::RRT> rrt_;
     std::shared_ptr<rrt_core::RRTStar> rrt_star_;
+    std::shared_ptr<rrt_core::RRTConnect> rrt_connect_;
 
     std::shared_ptr<collision::CheckCollision> collision_checker_;
 
