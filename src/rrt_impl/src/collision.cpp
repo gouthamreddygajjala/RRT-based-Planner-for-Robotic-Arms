@@ -88,6 +88,7 @@ namespace collision
                 }
             }
 
+            robot_geom_model_ = geom_model_;  // ← save clean robot-only copy
             robot_geom_count_ = geom_model_.geometryObjects.size();
 
             // ================= FINALIZE =================
@@ -408,103 +409,92 @@ namespace collision
         registerSceneGeometry(name, mesh, pose);
     }
 
-    void CheckCollision::registerSceneGeometry(const std::string &name, const std::shared_ptr<coal::CollisionGeometry> &geom, const Eigen::Isometry3d &pose)
+    void CheckCollision::registerSceneGeometry(
+        const std::string &name,
+        const std::shared_ptr<coal::CollisionGeometry> &geom,
+        const Eigen::Isometry3d &pose)
     {
+        std::lock_guard<std::mutex> lock(scene_mutex_);
+
         pinocchio::SE3 placement(pose.rotation(), pose.translation());
-
         pinocchio::GeometryObject obj(name, 0, geom, placement);
-        pinocchio::GeomIndex new_idx = geom_model_.addGeometryObject(obj);
-        scene_object_indices_.push_back(new_idx);
 
-        // Pair against every robot link (skip fingers/hand)
-        for (std::size_t i = 0; i < robot_geom_count_; ++i)
+        // Store the object for rebuild capability
+        scene_objects_.push_back(obj);
+
+        // Rebuild everything cleanly
+        rebuildGeomModel();
+
+        std::cout << "[Scene] ✅ Added '" << name
+                  << "' | pairs: " << geom_model_.collisionPairs.size() << "\n";
+    }
+
+    // ── Internal: rebuild geom_model_ from robot base + current scene objects ───
+    void CheckCollision::rebuildGeomModel()
+    {
+        // 1. Restore robot-only geometry model
+        geom_model_ = robot_geom_model_; // clean copy of original robot geom
+
+        // 2. Re-add all surviving scene objects
+        for (auto &obj : scene_objects_)
         {
-            const auto &go = geom_model_.geometryObjects[i];
-            if (go.name.find("finger") != std::string::npos ||
-                go.name.find("hand") != std::string::npos)
-                continue;
+            pinocchio::GeomIndex new_idx = geom_model_.addGeometryObject(obj);
 
-            geom_model_.addCollisionPair(pinocchio::CollisionPair(i, new_idx));
-        }
+            // Pair against every robot link (skip finger/hand)
+            for (std::size_t i = 0; i < robot_geom_count_; ++i)
+            {
+                const auto &go = geom_model_.geometryObjects[i];
+                if (go.name.find("finger") != std::string::npos ||
+                    go.name.find("hand") != std::string::npos)
+                    continue;
+                geom_model_.addCollisionPair(pinocchio::CollisionPair(i, new_idx));
+            }
 
-        // Pair against previously added scene objects
-        for (pinocchio::GeomIndex prev_idx : scene_object_indices_)
-        {
-            if (prev_idx != new_idx)
-                geom_model_.addCollisionPair(pinocchio::CollisionPair(prev_idx, new_idx));
+            // Pair against previously re-added scene objects
+            for (std::size_t i = robot_geom_count_;
+                 i < geom_model_.geometryObjects.size() - 1; ++i)
+            {
+                geom_model_.addCollisionPair(
+                    pinocchio::CollisionPair(i, new_idx));
+            }
         }
 
         geom_data_ = pinocchio::GeometryData(geom_model_);
 
-        std::cout << "[Scene] ✅ Added '" << name << "' | pairs: " << geom_model_.collisionPairs.size() << "\n";
+        // Rebuild index list
+        scene_object_indices_.clear();
+        for (std::size_t i = robot_geom_count_;
+             i < geom_model_.geometryObjects.size(); ++i)
+            scene_object_indices_.push_back(i);
     }
 
     bool CheckCollision::removeSceneObject(const std::string &name)
     {
-        // Find index by name
-        pinocchio::GeomIndex target = geom_model_.geometryObjects.size(); // sentinel
-        for (pinocchio::GeomIndex i = 0; i < geom_model_.geometryObjects.size(); ++i)
-        {
-            if (geom_model_.geometryObjects[i].name == name)
-            {
-                target = i;
-                break;
-            }
-        }
+        std::lock_guard<std::mutex> lock(scene_mutex_);
 
-        if (target == geom_model_.geometryObjects.size())
+        // Find in scene_objects_ list by name
+        auto it = std::find_if(scene_objects_.begin(), scene_objects_.end(),
+                               [&name](const pinocchio::GeometryObject &obj)
+                               { return obj.name == name; });
+
+        if (it == scene_objects_.end())
         {
             std::cout << "[Scene] ⚠️  Object '" << name << "' not found.\n";
             return false;
         }
 
-        // Drop all pairs referencing this index
-        geom_model_.collisionPairs.erase(std::remove_if(geom_model_.collisionPairs.begin(),
-                                                        geom_model_.collisionPairs.end(),
-                                                        [target](const pinocchio::CollisionPair &p)
-                                                        { return p.first == target || p.second == target; }),
-                                         geom_model_.collisionPairs.end());
-
-        // Remap indices that shifted down after erasure
-        for (auto &p : geom_model_.collisionPairs)
-        {
-            if (p.first > target)
-                --p.first;
-            if (p.second > target)
-                --p.second;
-        }
-
-        // Remove geometry object
-        geom_model_.geometryObjects.erase(geom_model_.geometryObjects.begin() + target);
-
-        // Fix scene bookkeeping
-        scene_object_indices_.erase(std::remove(scene_object_indices_.begin(),
-                                                scene_object_indices_.end(), target),
-                                    scene_object_indices_.end());
-
-        for (auto &idx : scene_object_indices_)
-            if (idx > target)
-                --idx;
-
-        geom_data_ = pinocchio::GeometryData(geom_model_);
+        scene_objects_.erase(it);
+        rebuildGeomModel();
 
         std::cout << "[Scene] 🗑️  Removed '" << name << "'\n";
         return true;
     }
 
-    // ── clearSceneObjects ─────────────────────────────────────────────────────────
-
     void CheckCollision::clearSceneObjects()
     {
-        // Snapshot names before indices shift
-        std::vector<std::string> names;
-        names.reserve(scene_object_indices_.size());
-        for (pinocchio::GeomIndex idx : scene_object_indices_)
-            names.push_back(geom_model_.geometryObjects[idx].name);
-
-        for (const auto &n : names)
-            removeSceneObject(n);
-
+        std::lock_guard<std::mutex> lock(scene_mutex_);
+        scene_objects_.clear();
+        rebuildGeomModel();
         std::cout << "[Scene] 🗑️  Cleared all scene objects.\n";
     }
 

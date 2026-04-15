@@ -5,7 +5,6 @@
 #include <iostream>
 #include <mutex>
 
-
 #define COAL_DISABLE_HPP_FCL_WARNINGS
 
 // Pinocchio core
@@ -48,7 +47,7 @@ namespace collision
             Eigen::Vector3d position;
             Eigen::Quaterniond orientation;
         };
-        
+
         explicit CheckCollision(const std::string &urdf_path);
         bool isStateValid(const std::vector<double> &q) const;
         double computeCartesianPathLength(const std::vector<std::vector<double>> &path, std::vector<Eigen::Vector3d> &tcp_points);
@@ -71,6 +70,8 @@ namespace collision
         pinocchio::Model model_;
         mutable pinocchio::Data data_;
 
+        pinocchio::GeometryModel robot_geom_model_; // ← pristine robot-only copy
+
         pinocchio::GeometryModel geom_model_;
         mutable pinocchio::GeometryData geom_data_;
 
@@ -80,8 +81,13 @@ namespace collision
 
         std::size_t robot_geom_count_{0};
         std::vector<pinocchio::GeomIndex> scene_object_indices_;
+        std::vector<pinocchio::GeometryObject> scene_objects_;
+
+        mutable std::mutex scene_mutex_;
 
         void registerSceneGeometry(const std::string &name, const std::shared_ptr<coal::CollisionGeometry> &geom,
                                    const Eigen::Isometry3d &pose);
+
+        void rebuildGeomModel();
     };
 }
