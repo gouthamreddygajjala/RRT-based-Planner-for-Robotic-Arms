@@ -30,63 +30,116 @@ namespace collision
             data_ = pinocchio::Data(model_);
 
             // ================= GEOMETRY =================
-            pinocchio::urdf::buildGeom(
-                model_,
-                urdf_path,
-                pinocchio::COLLISION,
-                geom_model_);
+            pinocchio::urdf::buildGeom(model_, urdf_path, pinocchio::COLLISION, geom_model_);
 
             geom_model_.addAllCollisionPairs();
 
             // ================= END EFFECTOR =================
-            std::string ee_name = "panda_link7"; // safest choice
+            std::string ee_name = "panda_hand"; // safest choice
 
             if (!model_.existFrame(ee_name))
             {
-                std::cout << "[WARN] EE frame " << ee_name
-                          << " not found!" << std::endl;
+                std::cout << "[WARN] EE frame " << ee_name << " not found!" << std::endl;
                 throw std::runtime_error("Invalid EE frame");
             }
 
             ee_frame_id_ = model_.getFrameId(ee_name);
 
-            // ================= FILTER COLLISION PAIRS =================
-            for (size_t i = 0; i < geom_model_.collisionPairs.size();)
-            {
-                const auto &pair = geom_model_.collisionPairs[i];
+            // // ================= FILTER COLLISION PAIRS =================
+            // for (size_t i = 0; i < geom_model_.collisionPairs.size();)
+            // {
+            //     const auto &pair = geom_model_.collisionPairs[i];
 
+            //     const auto &go1 = geom_model_.geometryObjects[pair.first];
+            //     const auto &go2 = geom_model_.geometryObjects[pair.second];
+
+            //     // Remove hand/finger collisions
+            //     // bool remove_hand = (go1.name.find("finger") != std::string::npos ||
+            //     //                     go1.name.find("hand") != std::string::npos ||
+            //     //                     go2.name.find("finger") != std::string::npos ||
+            //     //                     go2.name.find("hand") != std::string::npos);
+
+            //     auto isFinger = [](const std::string &name)
+            //     {
+            //         return name.find("finger") != std::string::npos;
+            //     };
+
+            //     auto isHand = [](const std::string &name)
+            //     {
+            //         return name.find("hand") != std::string::npos;
+            //     };
+
+            //     bool remove_hand_finger =
+            //         (isHand(go1.name) && isFinger(go2.name)) ||
+            //         (isHand(go2.name) && isFinger(go1.name));
+
+            //     // Remove adjacent links
+            //     pinocchio::JointIndex parent1 = go1.parentJoint;
+            //     pinocchio::JointIndex parent2 = go2.parentJoint;
+
+            //     bool same_parent = (parent1 == parent2);
+
+            //     bool direct_parent = (parent1 < model_.parents.size() && parent2 < model_.parents.size() &&
+            //                           (model_.parents[parent1] == parent2 || model_.parents[parent2] == parent1));
+
+            //     if (remove_hand_finger || same_parent || direct_parent)
+            //     {
+            //         geom_model_.collisionPairs.erase(geom_model_.collisionPairs.begin() + i);
+            //     }
+            //     else
+            //     {
+            //         ++i;
+            //     }
+            // }
+
+            // ================= FILTER COLLISION PAIRS =================
+            std::vector<pinocchio::CollisionPair> filtered;
+            filtered.reserve(geom_model_.collisionPairs.size()); // avoid reallocations
+
+            // Helper lambdas
+            auto isFinger = [](const std::string &name)
+            {
+                return name.find("finger") != std::string::npos;
+            };
+
+            auto isHand = [](const std::string &name)
+            {
+                return name.find("hand") != std::string::npos;
+            };
+
+            for (const auto &pair : geom_model_.collisionPairs)
+            {
                 const auto &go1 = geom_model_.geometryObjects[pair.first];
                 const auto &go2 = geom_model_.geometryObjects[pair.second];
 
-                // Remove hand/finger collisions
-                bool remove_hand =
-                    (go1.name.find("finger") != std::string::npos ||
-                     go1.name.find("hand") != std::string::npos ||
-                     go2.name.find("finger") != std::string::npos ||
-                     go2.name.find("hand") != std::string::npos);
+                // ---------------- HAND ↔ FINGER FILTER ----------------
+                bool remove_hand_finger = (isHand(go1.name) && isFinger(go2.name)) ||
+                                          (isHand(go2.name) && isFinger(go1.name));
 
-                // Remove adjacent links
+                // ---------------- ADJACENT LINK FILTER ----------------
                 pinocchio::JointIndex parent1 = go1.parentJoint;
                 pinocchio::JointIndex parent2 = go2.parentJoint;
 
                 bool same_parent = (parent1 == parent2);
 
-                bool direct_parent =
-                    (parent1 < model_.parents.size() &&
-                     parent2 < model_.parents.size() &&
-                     (model_.parents[parent1] == parent2 ||
-                      model_.parents[parent2] == parent1));
+                bool direct_parent = false;
+                if (parent1 < model_.parents.size() && parent2 < model_.parents.size())
+                {
+                    auto p1 = model_.parents[parent1];
+                    auto p2 = model_.parents[parent2];
 
-                if (remove_hand || same_parent || direct_parent)
-                {
-                    geom_model_.collisionPairs.erase(
-                        geom_model_.collisionPairs.begin() + i);
+                    direct_parent = (p1 == parent2 || p2 == parent1);
                 }
-                else
+
+                // ---------------- FINAL DECISION ----------------
+                if (!(remove_hand_finger || same_parent || direct_parent))
                 {
-                    ++i;
+                    filtered.push_back(pair); // keep valid pair
                 }
             }
+
+            // Replace with filtered pairs
+            geom_model_.collisionPairs = std::move(filtered);
 
             robot_geom_model_ = geom_model_; // ← save clean robot-only copy
             robot_geom_count_ = geom_model_.geometryObjects.size();
@@ -117,39 +170,38 @@ namespace collision
                 std::cout << "[Scene] 🌍 Ground plane added\n";
             }
 
-            // ================= ALLOW BASE ↔ GROUND =================
-            {
-                pinocchio::GeomIndex ground_idx = geom_model_.geometryObjects.size() - 1;
+            // // ================= ALLOW BASE ↔ GROUND =================
+            // {
+            //     pinocchio::GeomIndex ground_idx = geom_model_.geometryObjects.size() - 1;
 
-                for (size_t i = 0; i < geom_model_.collisionPairs.size();)
-                {
-                    const auto &pair = geom_model_.collisionPairs[i];
+            //     for (size_t i = 0; i < geom_model_.collisionPairs.size();)
+            //     {
+            //         const auto &pair = geom_model_.collisionPairs[i];
 
-                    const auto &go1 = geom_model_.geometryObjects[pair.first];
-                    const auto &go2 = geom_model_.geometryObjects[pair.second];
+            //         const auto &go1 = geom_model_.geometryObjects[pair.first];
+            //         const auto &go2 = geom_model_.geometryObjects[pair.second];
 
-                    bool is_ground_pair = (pair.first == ground_idx || pair.second == ground_idx);
+            //         bool is_ground_pair = (pair.first == ground_idx || pair.second == ground_idx);
 
-                    bool is_base_link = (go1.name.find("panda_link0") != std::string::npos ||
-                                         go2.name.find("panda_link0") != std::string::npos);
+            //         bool is_base_link = (go1.name.find("panda_link0") != std::string::npos ||
+            //                              go2.name.find("panda_link0") != std::string::npos);
 
-                    if (is_ground_pair && is_base_link)
-                    {
-                        std::cout << "[Scene] ⚙️ Allowing ground ↔ base collision: "
-                                  << go1.name << " <-> " << go2.name << std::endl;
+            //         if (is_ground_pair && is_base_link)
+            //         {
+            //             std::cout << "[Scene] ⚙️ Allowing ground ↔ base collision: "
+            //                       << go1.name << " <-> " << go2.name << std::endl;
 
-                        geom_model_.collisionPairs.erase(
-                            geom_model_.collisionPairs.begin() + i);
-                    }
-                    else
-                    {
-                        ++i;
-                    }
-                }
+            //             geom_model_.collisionPairs.erase(geom_model_.collisionPairs.begin() + i);
+            //         }
+            //         else
+            //         {
+            //             ++i;
+            //         }
+            //     }
 
-                // Refresh geom data after modification
-                geom_data_ = pinocchio::GeometryData(geom_model_);
-            }
+            //     // Refresh geom data after modification
+            //     geom_data_ = pinocchio::GeometryData(geom_model_);
+            // }
         }
         catch (const std::exception &e)
         {
@@ -340,10 +392,11 @@ namespace collision
     {
         std::shared_ptr<coal::CollisionGeometry> geom;
 
-        std::cout << "[addPrimitive] Type: " << static_cast<int>(type)
-                  << " | Params: [";
+        std::cout << "[addPrimitive] Type: " << static_cast<int>(type) << " | Params: [";
+
         for (size_t i = 0; i < params.size(); ++i)
             std::cout << params[i] << (i + 1 < params.size() ? ", " : "");
+
         std::cout << "]\n";
 
         switch (type)
@@ -357,32 +410,33 @@ namespace collision
         case PrimitiveType::CYLINDER:
             if (params.size() < 2)
                 throw std::invalid_argument("CYLINDER needs [radius, length]");
-            geom = std::make_shared<coal::Cylinder>(params[0], params[1]);
+            geom = std::make_shared<coal::Cylinder>(params[0], params[1] * 0.5); // coal Cylinder takes half-length
             break;
 
         case PrimitiveType::BOX:
             if (params.size() < 3)
                 throw std::invalid_argument("BOX needs [lx, ly, lz]");
-            geom = std::make_shared<coal::Box>(params[0], params[1], params[2]);
+            geom = std::make_shared<coal::Box>(params[0] * 0.5, params[1] * 0.5, params[2] * 0.5); // coal Box takes half-dimensions
             break;
 
         case PrimitiveType::CAPSULE:
             if (params.size() < 2)
                 throw std::invalid_argument("CAPSULE needs [radius, length]");
-            geom = std::make_shared<coal::Capsule>(params[0], params[1]);
+            geom = std::make_shared<coal::Capsule>(params[0], params[1] * 0.5); // coal Capsule takes half-shaft-length
             break;
 
         case PrimitiveType::CONE:
             if (params.size() < 2)
                 throw std::invalid_argument("CONE needs [radius, height]");
-            geom = std::make_shared<coal::Cone>(params[0], params[1]);
+            geom = std::make_shared<coal::Cone>(params[0], params[1] * 0.5); // coal Cone takes half-height
             break;
 
         default:
             throw std::invalid_argument("Unknown PrimitiveType");
         }
 
-        registerSceneGeometry(name, geom, pose);
+        // registerSceneGeometry(name, geom, pose);
+        registerSceneGeometry(name, type, params, pose);
     }
 
     void CheckCollision::addMesh(const std::string &name, const std::vector<Eigen::Vector3d> &vertices,
@@ -410,67 +464,223 @@ namespace collision
         mesh->endModel();
         mesh->computeLocalAABB();
 
-        registerSceneGeometry(name, mesh, pose);
+        // registerSceneGeometry(name, mesh, pose);
+        registerSceneGeometry(name, PrimitiveType::BOX, {0, 0, 0}, pose);
     }
 
     void CheckCollision::registerSceneGeometry(
         const std::string &name,
-        const std::shared_ptr<coal::CollisionGeometry> &geom,
+        PrimitiveType type,
+        const std::vector<double> &params,
         const Eigen::Isometry3d &pose)
     {
         std::lock_guard<std::mutex> lock(scene_mutex_);
 
-        pinocchio::SE3 placement(pose.rotation(), pose.translation());
-        pinocchio::GeometryObject obj(name, 0, geom, placement);
+        SceneObjectInfo info;
+        info.name = name;
+        info.type = type;
+        info.params = params;
 
-        // Store the object for rebuild capability
-        scene_objects_.push_back(obj);
+        info.position = pose.translation();
+        info.orientation = Eigen::Quaterniond(pose.rotation());
 
-        // Rebuild everything cleanly
+        scene_objects_.push_back(info);
+
         rebuildGeomModel();
 
         std::cout << "[Scene] ✅ Added '" << name
                   << "' | pairs: " << geom_model_.collisionPairs.size() << "\n";
     }
 
-    // ── Internal: rebuild geom_model_ from robot base + current scene objects ───
     void CheckCollision::rebuildGeomModel()
     {
-        // 1. Restore robot-only geometry model
-        geom_model_ = robot_geom_model_; // clean copy of original robot geom
+        // 1. Restore robot-only geometry
+        geom_model_ = robot_geom_model_;
 
-        // 2. Re-add all surviving scene objects
-        for (auto &obj : scene_objects_)
+        // 2. Re-add ALL scene objects with fresh geometry
+        for (const auto &obj : scene_objects_) // ← now SceneObjectInfo
         {
-            pinocchio::GeomIndex new_idx = geom_model_.addGeometryObject(obj);
+            std::shared_ptr<coal::CollisionGeometry> geom;
 
-            // Pair against every robot link (skip finger/hand)
+            // ── Recreate geometry from FULL params ─────────────────────────────
+            if (obj.type == PrimitiveType::SPHERE && obj.params.size() >= 1)
+            {
+                geom = std::make_shared<coal::Sphere>(obj.params[0]);
+            }
+            else if (obj.type == PrimitiveType::BOX && obj.params.size() >= 3)
+            {
+                geom = std::make_shared<coal::Box>(
+                    obj.params[0],
+                    obj.params[1],
+                    obj.params[2]);
+            }
+            else if (obj.type == PrimitiveType::CYLINDER && obj.params.size() >= 2)
+            {
+                geom = std::make_shared<coal::Cylinder>(
+                    obj.params[0],
+                    obj.params[1]);
+            }
+            else if (obj.type == PrimitiveType::CAPSULE && obj.params.size() >= 2)
+            {
+                geom = std::make_shared<coal::Capsule>(
+                    obj.params[0],
+                    obj.params[1] // shaft only
+                );
+            }
+            else if (obj.type == PrimitiveType::CONE && obj.params.size() >= 2)
+            {
+                geom = std::make_shared<coal::Cone>(
+                    obj.params[0],
+                    obj.params[1]);
+            }
+            else
+            {
+                std::cout << "[Scene] ⚠️ Unknown or invalid object: " << obj.name << "\n";
+                continue;
+            }
+
+            // ── Pose ─────────────────────────────────────────────────────────
+            pinocchio::SE3 placement(
+                obj.orientation.toRotationMatrix(),
+                obj.position);
+
+            pinocchio::GeometryObject new_obj(obj.name, 0, geom, placement);
+
+            pinocchio::GeomIndex new_idx = geom_model_.addGeometryObject(new_obj);
+
+            // ── Collision pairs: object vs robot ──────────────────────────────
             for (std::size_t i = 0; i < robot_geom_count_; ++i)
             {
-                const auto &go = geom_model_.geometryObjects[i];
-                if (go.name.find("finger") != std::string::npos ||
-                    go.name.find("hand") != std::string::npos)
-                    continue;
                 geom_model_.addCollisionPair(pinocchio::CollisionPair(i, new_idx));
             }
 
-            // Pair against previously re-added scene objects
-            for (std::size_t i = robot_geom_count_;
-                 i < geom_model_.geometryObjects.size() - 1; ++i)
+            // ── Collision pairs: object vs previous objects ───────────────────
+            // for (std::size_t i = robot_geom_count_; i < new_idx; ++i)
+            // {
+            //     geom_model_.addCollisionPair(pinocchio::CollisionPair(i, new_idx));
+            // }
+        }
+
+        // ── Allow base ↔ ground (optional) ───────────────────────────────────
+        pinocchio::GeomIndex ground_idx = geom_model_.geometryObjects.size();
+
+        for (std::size_t i = robot_geom_count_; i < geom_model_.geometryObjects.size(); ++i)
+        {
+            if (geom_model_.geometryObjects[i].name == "ground_plane")
             {
-                geom_model_.addCollisionPair(
-                    pinocchio::CollisionPair(i, new_idx));
+                ground_idx = i;
+                break;
             }
         }
 
+        if (ground_idx < geom_model_.geometryObjects.size())
+        {
+            geom_model_.collisionPairs.erase(
+                std::remove_if(geom_model_.collisionPairs.begin(), geom_model_.collisionPairs.end(),
+                               [&](const pinocchio::CollisionPair &pair)
+                               {
+                                   //    bool is_ground = (pair.first == ground_idx || pair.second == ground_idx);
+
+                                   //    bool is_base = (geom_model_.geometryObjects[pair.first].name.find("link0") != std::string::npos ||
+                                   //                    geom_model_.geometryObjects[pair.second].name.find("link0") != std::string::npos);
+
+                                   //    return is_ground && is_base;
+
+                                   bool involves_ground = (pair.first == ground_idx || pair.second == ground_idx);
+
+                                   if (!involves_ground)
+                                       return false; // Keep pairs that don't involve ground
+
+                                   // Get the other object in the pair
+                                   pinocchio::GeomIndex other_idx = (pair.first == ground_idx) ? pair.second : pair.first;
+
+                                   // Remove if it's link0 (base)
+                                   bool is_link0 = (geom_model_.geometryObjects[other_idx].name.find("link0") != std::string::npos);
+
+                                   // Remove if it's a scene object (index >= robot_geom_count_)
+                                   bool is_scene_object = (other_idx >= robot_geom_count_ && other_idx != ground_idx);
+
+                                   return is_link0 || is_scene_object;
+                               }),
+                geom_model_.collisionPairs.end());
+        }
+
+        // ── Finalize ─────────────────────────────────────────────────────────
         geom_data_ = pinocchio::GeometryData(geom_model_);
 
         // Rebuild index list
         scene_object_indices_.clear();
-        for (std::size_t i = robot_geom_count_;
-             i < geom_model_.geometryObjects.size(); ++i)
+        for (std::size_t i = robot_geom_count_; i < geom_model_.geometryObjects.size(); ++i)
+        {
             scene_object_indices_.push_back(i);
+        }
+
+        std::cout << "[Scene] 🔁 Rebuilt geom model | total objects: "
+                  << geom_model_.geometryObjects.size()
+                  << " | pairs: " << geom_model_.collisionPairs.size() << "\n";
     }
+
+    // ── Internal: rebuild geom_model_ from robot base + current scene objects ───
+    // void CheckCollision::rebuildGeomModel()
+    // {
+    //     // 1. Restore robot-only geometry model
+    //     geom_model_ = robot_geom_model_; // clean copy of original robot geom
+
+    //     // 2. Re-add all surviving scene objects
+    //     for (auto &obj : scene_objects_)
+    //     {
+    //         pinocchio::GeomIndex new_idx = geom_model_.addGeometryObject(obj);
+
+    //         // Pair against every robot link (skip finger/hand)
+    //         for (std::size_t i = 0; i < robot_geom_count_; ++i)
+    //         {
+    //             const auto &go = geom_model_.geometryObjects[i];
+    //             // if (go.name.find("finger") != std::string::npos ||           //disable finger/hand collision filtering for new objects
+    //             //     go.name.find("hand") != std::string::npos)
+    //             //     continue;
+    //             geom_model_.addCollisionPair(pinocchio::CollisionPair(i, new_idx));
+    //         }
+
+    //         // Pair against previously re-added scene objects
+    //         for (std::size_t i = robot_geom_count_; i < geom_model_.geometryObjects.size() - 1; ++i)
+    //         {
+    //             geom_model_.addCollisionPair(pinocchio::CollisionPair(i, new_idx));
+    //         }
+    //     }
+
+    //     // ── Reapply base ↔ ground exclusion every rebuild ────────────────────────
+    //     pinocchio::GeomIndex ground_idx = geom_model_.geometryObjects.size(); // sentinel
+    //     for (std::size_t i = robot_geom_count_; i < geom_model_.geometryObjects.size(); ++i)
+    //     {
+    //         if (geom_model_.geometryObjects[i].name == "ground_plane")
+    //         {
+    //             ground_idx = i;
+    //             break;
+    //         }
+    //     }
+
+    //     if (ground_idx < geom_model_.geometryObjects.size())
+    //     {
+    //         geom_model_.collisionPairs.erase(
+    //             std::remove_if(geom_model_.collisionPairs.begin(),
+    //                            geom_model_.collisionPairs.end(),
+    //                            [&](const pinocchio::CollisionPair &pair)
+    //                            {
+    //                                bool is_ground = (pair.first == ground_idx || pair.second == ground_idx);
+    //                                bool is_base = (geom_model_.geometryObjects[pair.first].name.find("link0") != std::string::npos ||
+    //                                                geom_model_.geometryObjects[pair.second].name.find("link0") != std::string::npos);
+    //                                return is_ground && is_base;
+    //                            }),
+    //             geom_model_.collisionPairs.end());
+    //     }
+
+    //     geom_data_ = pinocchio::GeometryData(geom_model_);
+
+    //     // Rebuild index list
+    //     scene_object_indices_.clear();
+    //     for (std::size_t i = robot_geom_count_; i < geom_model_.geometryObjects.size(); ++i)
+    //         scene_object_indices_.push_back(i);
+    // }
 
     bool CheckCollision::removeSceneObject(const std::string &name)
     {
@@ -478,7 +688,7 @@ namespace collision
 
         // Find in scene_objects_ list by name
         auto it = std::find_if(scene_objects_.begin(), scene_objects_.end(),
-                               [&name](const pinocchio::GeometryObject &obj)
+                               [&name](const SceneObjectInfo &obj)
                                { return obj.name == name; });
 
         if (it == scene_objects_.end())
@@ -526,38 +736,48 @@ namespace collision
             case coal::GEOM_SPHERE:
             {
                 const auto *s = dynamic_cast<const coal::Sphere *>(geom.get());
-                info.type = "sphere";
-                info.dims = {s->radius}; // [radius]
+                info.type = PrimitiveType::SPHERE;
+                info.params = {s->radius}; // [radius]
                 break;
             }
             case coal::GEOM_CYLINDER:
             {
                 const auto *c = dynamic_cast<const coal::Cylinder *>(geom.get());
-                info.type = "cylinder";
-                info.dims = {c->radius, c->halfLength * 2.0}; // [radius, full_length]
+                info.type = PrimitiveType::CYLINDER;
+                info.params = {c->radius, c->halfLength * 2.0}; // [radius, full_length]
                 break;
             }
             case coal::GEOM_BOX:
             {
                 const auto *b = dynamic_cast<const coal::Box *>(geom.get());
-                info.type = "box";
-                info.dims = {b->halfSide[0] * 2.0,
-                             b->halfSide[1] * 2.0,
-                             b->halfSide[2] * 2.0}; // [lx, ly, lz]
+                info.type = PrimitiveType::BOX;
+
+                std::cout << "[DEBUG] Box halfSide: "
+                          << b->halfSide[0] << ", "
+                          << b->halfSide[1] << ", "
+                          << b->halfSide[2] << std::endl;
+
+                std::cout << "[DEBUG] Box full params: "
+                          << b->halfSide[0] * 2.0 << ", "
+                          << b->halfSide[1] * 2.0 << ", "
+                          << b->halfSide[2] * 2.0 << std::endl;
+                info.params = {b->halfSide[0] * 2.0,
+                               b->halfSide[1] * 2.0,
+                               b->halfSide[2] * 2.0}; // [lx, ly, lz]
                 break;
             }
             case coal::GEOM_CAPSULE:
             {
                 const auto *c = dynamic_cast<const coal::Capsule *>(geom.get());
-                info.type = "capsule";
-                info.dims = {c->radius, c->halfLength * 2.0}; // [radius, full_shaft_length]
+                info.type = PrimitiveType::CAPSULE;
+                info.params = {c->radius, c->halfLength * 2.0}; // [radius, full_shaft_length]
                 break;
             }
             case coal::GEOM_CONE:
             {
                 const auto *c = dynamic_cast<const coal::Cone *>(geom.get());
-                info.type = "cone";
-                info.dims = {c->radius, c->halfLength * 2.0}; // [radius, full_height]
+                info.type = PrimitiveType::CONE;
+                info.params = {c->radius, c->halfLength * 2.0}; // [radius, full_height]
                 break;
             }
             case coal::BV_OBBRSS:
@@ -568,8 +788,8 @@ namespace collision
                 {
                     coal::Vec3f aabb_min = bvh->aabb_local.min_;
                     coal::Vec3f aabb_max = bvh->aabb_local.max_;
-                    info.type = "mesh";
-                    info.dims = {
+                    info.type = PrimitiveType::MESH;
+                    info.params = {
                         static_cast<double>(aabb_max[0] - aabb_min[0]), // x extent
                         static_cast<double>(aabb_max[1] - aabb_min[1]), // y extent
                         static_cast<double>(aabb_max[2] - aabb_min[2])  // z extent
@@ -577,14 +797,14 @@ namespace collision
                 }
                 else
                 {
-                    info.type = "mesh";
-                    info.dims = {};
+                    info.type = PrimitiveType::MESH;
+                    info.params = {};
                 }
                 break;
             }
             default:
-                info.type = "unknown";
-                info.dims = {};
+                info.type = PrimitiveType::MESH;
+                info.params = {};
                 break;
             }
 
@@ -608,10 +828,10 @@ namespace collision
         for (const auto &obj : objects)
         {
             std::cout << "  Name : " << obj.name << "\n"
-                      << "  Type : " << obj.type << "\n"
+                      << "\n"
                       << "  Dims : [";
-            for (size_t i = 0; i < obj.dims.size(); ++i)
-                std::cout << obj.dims[i] << (i + 1 < obj.dims.size() ? ", " : "");
+            for (size_t i = 0; i < obj.params.size(); ++i)
+                std::cout << obj.params[i] << (i + 1 < obj.params.size() ? ", " : "");
             std::cout << "]\n"
                       << "  Pos  : ["
                       << obj.position.x() << ", "

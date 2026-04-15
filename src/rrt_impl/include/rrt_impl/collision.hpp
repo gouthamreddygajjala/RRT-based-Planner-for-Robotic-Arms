@@ -33,7 +33,8 @@ namespace collision
         CYLINDER, // params: [radius, full_length]
         BOX,      // params: [lx, ly, lz]
         CAPSULE,  // params: [radius, full_shaft_length]
-        CONE      // params: [radius, full_height]
+        CONE,      // params: [radius, full_height]
+        MESH      // params: [ignored, use actual mesh data]
     };
 
     class CheckCollision
@@ -42,8 +43,8 @@ namespace collision
         struct SceneObjectInfo
         {
             std::string name;
-            std::string type;         // "sphere", "box", "cylinder", "capsule", "cone", "mesh", "unknown"
-            std::vector<double> dims; // shape-specific dimensions (full lengths, not half)
+            PrimitiveType type;           // "sphere", "box", "cylinder", "capsule", "cone", "mesh", "unknown"
+            std::vector<double> params; // shape-specific dimensions (full lengths, not half)
             Eigen::Vector3d position;
             Eigen::Quaterniond orientation;
         };
@@ -81,13 +82,13 @@ namespace collision
 
         std::size_t robot_geom_count_{0};
         std::vector<pinocchio::GeomIndex> scene_object_indices_;
-        std::vector<pinocchio::GeometryObject> scene_objects_;
+        std::vector<SceneObjectInfo> scene_objects_;
 
         mutable std::mutex scene_mutex_;
 
-        void registerSceneGeometry(const std::string &name, const std::shared_ptr<coal::CollisionGeometry> &geom,
-                                   const Eigen::Isometry3d &pose);
+        void registerSceneGeometry(const std::string &name, PrimitiveType type,
+                                   const std::vector<double> &params, const Eigen::Isometry3d &pose);
 
-        void rebuildGeomModel();
+            void rebuildGeomModel();
     };
 }

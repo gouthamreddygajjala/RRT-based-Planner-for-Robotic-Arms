@@ -87,24 +87,7 @@ RRTNode::RRTNode() : Node("rrt_node")
     dof_ = dof;
 
     collision_checker_ = std::make_shared<collision::CheckCollision>(urdf_);
-
-    // rrt_ = std::make_shared<rrt_core::RRT>(dof, urdf);
-
-    // rrt_->setJointLimits(lower_limits_, upper_limits_);
-    // rrt_->setStepSize(step_size);
-    // rrt_->setGoalBias(goal_bias);
-    // rrt_->setGoalTolerance(goal_tolerance);
-
-    // rrt_star_ = std::make_shared<rrt_core::RRTStar>(dof_, urdf);
-
-    // rrt_star_->setJointLimits(lower_limits_, upper_limits_);
-    // rrt_star_->setStepSize(step_size);
-    // rrt_star_->setGoalBias(goal_bias);
-    // rrt_star_->setGoalTolerance(goal_tolerance);
-
     smoother_ = std::make_shared<rrt_core::RuckigSmoother>(dof_, 0.01);
-
-    // collision_checker_ = std::make_shared<collision::CheckCollision>(urdf_); // only to compute path length
 
     RCLCPP_INFO(this->get_logger(), "RRT Node initialized. Waiting for goal...");
 }
@@ -121,7 +104,6 @@ void RRTNode::run(uint8_t planner_type)
     {
         if (!rrt_) // construct only once
         {
-            // RCLCPP_INFO(this->get_logger(), "Initializing RRT planner...");
             rrt_ = std::make_shared<rrt_core::RRT>(dof_, collision_checker_);
             rrt_->setJointLimits(lower_limits_, upper_limits_);
             rrt_->setStepSize(step_size);
@@ -136,7 +118,6 @@ void RRTNode::run(uint8_t planner_type)
     {
         if (!rrt_star_) // construct only once
         {
-            // RCLCPP_INFO(this->get_logger(), "Initializing RRT* planner...");
             rrt_star_ = std::make_shared<rrt_core::RRTStar>(dof_, collision_checker_);
             rrt_star_->setJointLimits(lower_limits_, upper_limits_);
             rrt_star_->setStepSize(step_size);
@@ -151,7 +132,6 @@ void RRTNode::run(uint8_t planner_type)
     {
         if (!rrt_connect_) // construct only once
         {
-            // RCLCPP_INFO(this->get_logger(), "Initializing RRT-Connect planner...");
             rrt_connect_ = std::make_shared<rrt_core::RRTConnect>(dof_, collision_checker_);
             rrt_connect_->setJointLimits(lower_limits_, upper_limits_);
             rrt_connect_->setStepSize(step_size);
@@ -205,11 +185,6 @@ void RRTNode::run(uint8_t planner_type)
 
     if (success)
     {
-        // std::cout << "planner_: " << planner_.get() << std::endl;
-        // std::cout << "rrt_: " << rrt_.get() << std::endl;
-        // std::cout << "rrt_star_: " << rrt_star_.get() << std::endl;
-        // std::cout << "rrt_connect_: " << rrt_connect_.get() << std::endl;
-
         RCLCPP_INFO(this->get_logger(), "Path found!");
 
         path_ = planner_->getPath();
@@ -239,7 +214,6 @@ void RRTNode::run(uint8_t planner_type)
                 }
 
                 oss << "]";
-
                 RCLCPP_INFO(this->get_logger(), "%s", oss.str().c_str());
             }
         }
@@ -388,12 +362,10 @@ void RRTNode::publishTrajectory(const std::vector<std::vector<double>> &path)
         if (i > 0)
         {
             double segment_length = (clean_tcp[i] - clean_tcp[i - 1]).norm();
-
             double segment_time = (segment_length / std::max(clean_length, 1e-6)) * total_time;
 
             // 🔥 Critical fix
             segment_time = std::max(segment_time, min_dt);
-
             accumulated_time += segment_time;
         }
 
@@ -612,52 +584,52 @@ void RRTNode::publishSceneMarkers()
         marker.color.a = 0.6f;
 
         // ── Shape + scale ─────────────────────────────────────────────────
-        if (obj.type == "sphere" && obj.dims.size() >= 1)
+        if (obj.type == collision::PrimitiveType::SPHERE && obj.params.size() >= 1)
         {
-            marker.type = visualization_msgs::msg::Marker::SPHERE;
-            double r = obj.dims[0];
-            marker.scale.x = r * 2.0;
+            marker.type = visualization_msgs::msg::Marker::SPHERE;  
+            double r = obj.params[0];
+            marker.scale.x = r * 2.0;  //rviz takes diameter 
             marker.scale.y = r * 2.0;
             marker.scale.z = r * 2.0;
         }
-        else if (obj.type == "box" && obj.dims.size() >= 3)
+        else if (obj.type == collision::PrimitiveType::BOX && obj.params.size() >= 3)
         {
             marker.type = visualization_msgs::msg::Marker::CUBE;
-            marker.scale.x = obj.dims[0];
-            marker.scale.y = obj.dims[1];
-            marker.scale.z = obj.dims[2];
+            marker.scale.x = obj.params[0];
+            marker.scale.y = obj.params[1];
+            marker.scale.z = obj.params[2];
         }
-        else if (obj.type == "cylinder" && obj.dims.size() >= 2)
+        else if (obj.type == collision::PrimitiveType::CYLINDER && obj.params.size() >= 2)
         {
             marker.type = visualization_msgs::msg::Marker::CYLINDER;
-            marker.scale.x = obj.dims[0] * 2.0; // diameter
-            marker.scale.y = obj.dims[0] * 2.0;
-            marker.scale.z = obj.dims[1]; // full length
+            marker.scale.x = obj.params[0] * 2.0; // diameter
+            marker.scale.y = obj.params[0] * 2.0;
+            marker.scale.z = obj.params[1]; // full length
         }
-        else if (obj.type == "capsule" && obj.dims.size() >= 2)
+        else if (obj.type == collision::PrimitiveType::CAPSULE && obj.params.size() >= 2)
         {
             // RViz has no capsule — approximate with cylinder
             marker.type = visualization_msgs::msg::Marker::CYLINDER;
-            marker.scale.x = obj.dims[0] * 2.0;
-            marker.scale.y = obj.dims[0] * 2.0;
-            marker.scale.z = obj.dims[1] + obj.dims[0] * 2.0; // shaft + caps
+            marker.scale.x = obj.params[0] * 2.0;
+            marker.scale.y = obj.params[0] * 2.0;
+            marker.scale.z = obj.params[1] + obj.params[0] * 2.0; // shaft + caps
         }
-        else if (obj.type == "cone" && obj.dims.size() >= 2)
+        else if (obj.type == collision::PrimitiveType::CONE && obj.params.size() >= 2)
         {
             // RViz has no cone — use a flattened sphere as fallback
             // or use ARROW which looks cone-like
             marker.type = visualization_msgs::msg::Marker::ARROW;
-            marker.scale.x = obj.dims[1];       // shaft length = height
-            marker.scale.y = obj.dims[0] * 2.0; // head diameter = base diameter
-            marker.scale.z = obj.dims[0] * 2.0;
+            marker.scale.x = obj.params[1];       // shaft length = height
+            marker.scale.y = obj.params[0] * 2.0; // head diameter = base diameter
+            marker.scale.z = obj.params[0] * 2.0;
         }
-        else if (obj.type == "mesh" && obj.dims.size() >= 3)
+        else if (obj.type == collision::PrimitiveType::MESH && obj.params.size() >= 3)
         {
             // Show AABB as a cube for meshes
             marker.type = visualization_msgs::msg::Marker::CUBE;
-            marker.scale.x = obj.dims[0];
-            marker.scale.y = obj.dims[1];
-            marker.scale.z = obj.dims[2];
+            marker.scale.x = obj.params[0];
+            marker.scale.y = obj.params[1];
+            marker.scale.z = obj.params[2];
             marker.color.r = 0.2f;
             marker.color.g = 0.6f;
             marker.color.b = 1.0f;
@@ -672,8 +644,7 @@ void RRTNode::publishSceneMarkers()
     }
 
     scene_marker_pub_->publish(marker_array);
-    RCLCPP_INFO(this->get_logger(), "[Scene] Published %zu markers to RViz",
-                marker_array.markers.size());
+    RCLCPP_INFO(this->get_logger(), "[Scene] Published %zu markers to RViz", marker_array.markers.size());
 }
 
 int main(int argc, char **argv)
