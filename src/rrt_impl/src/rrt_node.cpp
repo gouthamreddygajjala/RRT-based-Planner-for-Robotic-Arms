@@ -497,6 +497,18 @@ void RRTNode::sceneCommandCallback(const custom_msgs::msg::SceneCommand::SharedP
     {
         const auto &p = msg->primitive;
 
+        // ===== PRINT BASIC INFO =====
+        RCLCPP_INFO(this->get_logger(), "Action: ADD_PRIMITIVE");
+        RCLCPP_INFO(this->get_logger(), "Name  : %s", p.name.c_str());
+        RCLCPP_INFO(this->get_logger(), "Type  : %d", p.type);
+
+        // ===== PRINT PARAMS =====
+        std::stringstream ss;
+        ss << "Params: ";
+        for (auto val : p.params)
+            ss << val << " ";
+        RCLCPP_INFO(this->get_logger(), "%s", ss.str().c_str());
+
         Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
         pose.translation() = Eigen::Vector3d(p.pose.position.x,
                                              p.pose.position.y,
@@ -507,10 +519,8 @@ void RRTNode::sceneCommandCallback(const custom_msgs::msg::SceneCommand::SharedP
                              p.pose.orientation.z);
         pose.linear() = q.toRotationMatrix();
 
-        collision_checker_->addPrimitive(p.name,
-                                         static_cast<collision::PrimitiveType>(p.type),
-                                         std::vector<double>(p.params.begin(), p.params.end()),
-                                         pose);
+        collision_checker_->addPrimitive(p.name, static_cast<collision::PrimitiveType>(p.type),
+                                         std::vector<double>(p.params.begin(), p.params.end()), pose);
         break;
     }
     case Cmd::ADD_MESH:

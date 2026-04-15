@@ -88,7 +88,7 @@ namespace collision
                 }
             }
 
-            robot_geom_model_ = geom_model_;  // ← save clean robot-only copy
+            robot_geom_model_ = geom_model_; // ← save clean robot-only copy
             robot_geom_count_ = geom_model_.geometryObjects.size();
 
             // ================= FINALIZE =================
@@ -98,10 +98,8 @@ namespace collision
             // ================= DEBUG =================
             std::cout << "===== COLLISION INIT =====" << std::endl;
             std::cout << "DOF: " << dof_ << std::endl;
-            std::cout << "Geometry objects: "
-                      << geom_model_.geometryObjects.size() << std::endl;
-            std::cout << "Collision pairs: "
-                      << geom_model_.collisionPairs.size() << std::endl;
+            std::cout << "Geometry objects: " << geom_model_.geometryObjects.size() << std::endl;
+            std::cout << "Collision pairs: " << geom_model_.collisionPairs.size() << std::endl;
             std::cout << "==========================" << std::endl;
 
             // ================= GROUND PLANE =================
@@ -112,7 +110,7 @@ namespace collision
                 pose.translation() = Eigen::Vector3d(0.0, 0.0, -0.01); // slight offset below 0
 
                 // Large flat box: 10m x 10m x 2cm
-                std::vector<double> params = {10.0, 10.0, 0.02};
+                std::vector<double> params = {10.0, 10.0, 0.002};
 
                 addPrimitive("ground_plane", PrimitiveType::BOX, params, pose);
 
@@ -342,6 +340,12 @@ namespace collision
     {
         std::shared_ptr<coal::CollisionGeometry> geom;
 
+        std::cout << "[addPrimitive] Type: " << static_cast<int>(type)
+                  << " | Params: [";
+        for (size_t i = 0; i < params.size(); ++i)
+            std::cout << params[i] << (i + 1 < params.size() ? ", " : "");
+        std::cout << "]\n";
+
         switch (type)
         {
         case PrimitiveType::SPHERE:
@@ -353,25 +357,25 @@ namespace collision
         case PrimitiveType::CYLINDER:
             if (params.size() < 2)
                 throw std::invalid_argument("CYLINDER needs [radius, length]");
-            geom = std::make_shared<coal::Cylinder>(params[0], params[1] * 0.5);
+            geom = std::make_shared<coal::Cylinder>(params[0], params[1]);
             break;
 
         case PrimitiveType::BOX:
             if (params.size() < 3)
                 throw std::invalid_argument("BOX needs [lx, ly, lz]");
-            geom = std::make_shared<coal::Box>(params[0] * 0.5, params[1] * 0.5, params[2] * 0.5);
+            geom = std::make_shared<coal::Box>(params[0], params[1], params[2]);
             break;
 
         case PrimitiveType::CAPSULE:
             if (params.size() < 2)
                 throw std::invalid_argument("CAPSULE needs [radius, length]");
-            geom = std::make_shared<coal::Capsule>(params[0], params[1] * 0.5);
+            geom = std::make_shared<coal::Capsule>(params[0], params[1]);
             break;
 
         case PrimitiveType::CONE:
             if (params.size() < 2)
                 throw std::invalid_argument("CONE needs [radius, height]");
-            geom = std::make_shared<coal::Cone>(params[0], params[1] * 0.5);
+            geom = std::make_shared<coal::Cone>(params[0], params[1]);
             break;
 
         default:

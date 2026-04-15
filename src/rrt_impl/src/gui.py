@@ -1,4 +1,4 @@
-# ONLY STYLE + RANDOM BUTTON + DYNAMIC DIMENSIONS — EVERYTHING ELSE SAME
+# ONLY STYLE + RANDOM BUTTON + SEPARATE PARAM FIELDS — EVERYTHING ELSE SAME
 
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -161,7 +161,9 @@ class RRTGui(Node):
         name_frame.pack(fill="x", pady=4)
 
         self.obj_name_var = tk.StringVar(value="obstacle_1")
-        tk.Entry(name_frame, textvariable=self.obj_name_var).pack(fill="x", padx=6, pady=4)
+        tk.Entry(name_frame, textvariable=self.obj_name_var,
+                 bg="#ffffff", fg="#222222", insertbackground="#222222",
+                 font=("Arial", 10), relief="solid", bd=1).pack(fill="x", padx=6, pady=4)
 
         pose_frame = ttk.LabelFrame(left, text="Pose  (x y z qx qy qz qw)")
         pose_frame.pack(fill="x", pady=4)
@@ -173,7 +175,10 @@ class RRTGui(Node):
 
         for i, val in enumerate(defaults):
             v = tk.DoubleVar(value=val)
-            tk.Entry(pose_inner, textvariable=v, width=6).grid(row=0, column=i, padx=2)
+            tk.Entry(pose_inner, textvariable=v, width=6,
+                     bg="#ffffff", fg="#222222",
+                     insertbackground="#222222",
+                     font=("Arial", 9), relief="solid", bd=1).grid(row=0, column=i, padx=2)
             self.pose_vars.append(v)
 
         prim_frame = ttk.LabelFrame(left, text="Add Primitive")
@@ -190,8 +195,12 @@ class RRTGui(Node):
         self.param_label = ttk.Label(prim_frame, text="Dimensions (x y z)")
         self.param_label.pack()
 
-        self.prim_params_var = tk.StringVar(value="1.0 0.8 0.02")
-        tk.Entry(prim_frame, textvariable=self.prim_params_var).pack(padx=6, pady=4)
+        # ===== NEW PARAM FIELDS =====
+        self.param_container = ttk.Frame(prim_frame)
+        self.param_container.pack(pady=4)
+
+        self.param_entries = []
+        self.build_param_fields("BOX")
 
         ttk.Button(prim_frame, text="Add Primitive",
                    command=self.send_add_primitive).pack(pady=6)
@@ -199,26 +208,66 @@ class RRTGui(Node):
         right = ttk.Frame(parent)
         right.pack(side="right", fill="both", padx=10, pady=8)
 
-        self.obj_listbox = tk.Listbox(right)
+        self.obj_listbox = tk.Listbox(
+            right,
+            bg="#ffffff",
+            fg="#222222",
+            selectbackground="#cce5ff",
+            font=("Arial", 10)
+        )
         self.obj_listbox.pack(fill="both", expand=True)
 
         ttk.Button(right, text="Remove",
                    command=self.send_remove_object).pack(pady=3)
+
+    # ===== NEW FUNCTION =====
+    def build_param_fields(self, prim_type):
+        for widget in self.param_container.winfo_children():
+            widget.destroy()
+
+        self.param_entries = []
+
+        def add_field(label, default):
+            frame = ttk.Frame(self.param_container)
+            frame.pack(side="left", padx=3)
+
+            ttk.Label(frame, text=label).pack()
+
+            var = tk.DoubleVar(value=default)
+            entry = tk.Entry(frame,
+                             textvariable=var,
+                             width=6,
+                             bg="#ffffff",
+                             fg="#222222",
+                             insertbackground="#222222",
+                             font=("Arial", 9),
+                             relief="solid",
+                             bd=1)
+            entry.pack()
+
+            self.param_entries.append(var)
+
+        if prim_type == "BOX":
+            add_field("x", 1.0)
+            add_field("y", 0.8)
+            add_field("z", 0.02)
+        elif prim_type == "SPHERE":
+            add_field("r", 0.5)
+        else:
+            add_field("r", 0.3)
+            add_field("h", 1.0)
 
     def on_primitive_change(self, event=None):
         prim = self.prim_type_var.get()
 
         if prim == "BOX":
             self.param_label.config(text="Dimensions (x y z)")
-            self.prim_params_var.set("1.0 0.8 0.02")
-
         elif prim == "SPHERE":
             self.param_label.config(text="Radius")
-            self.prim_params_var.set("0.5")
-
         else:
             self.param_label.config(text="Radius Height")
-            self.prim_params_var.set("0.3 1.0")
+
+        self.build_param_fields(prim)
 
     # ================= METHODS =================
     def _build_pose(self):
@@ -243,14 +292,7 @@ class RRTGui(Node):
         }
 
         msg.primitive.type = prim_map[self.prim_type_var.get()]
-
-        try:
-            params = list(map(float, self.prim_params_var.get().split()))
-        except:
-            messagebox.showerror("Error", "Invalid dimension format")
-            return
-
-        msg.primitive.params = params
+        msg.primitive.params = [v.get() for v in self.param_entries]
         msg.primitive.pose = self._build_pose()
 
         self.scene_pub.publish(msg)
