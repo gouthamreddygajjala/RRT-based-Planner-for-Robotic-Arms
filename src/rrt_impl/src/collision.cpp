@@ -129,12 +129,10 @@ namespace collision
                     const auto &go1 = geom_model_.geometryObjects[pair.first];
                     const auto &go2 = geom_model_.geometryObjects[pair.second];
 
-                    bool is_ground_pair =
-                        (pair.first == ground_idx || pair.second == ground_idx);
+                    bool is_ground_pair = (pair.first == ground_idx || pair.second == ground_idx);
 
-                    bool is_base_link =
-                        (go1.name.find("panda_link0") != std::string::npos ||
-                         go2.name.find("panda_link0") != std::string::npos);
+                    bool is_base_link = (go1.name.find("panda_link0") != std::string::npos ||
+                                         go2.name.find("panda_link0") != std::string::npos);
 
                     if (is_ground_pair && is_base_link)
                     {
