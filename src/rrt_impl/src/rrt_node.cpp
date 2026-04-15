@@ -12,6 +12,8 @@ RRTNode::RRTNode() : Node("rrt_node")
     tcp_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("/rrt_path", 10);
     traj_pub_ = this->create_publisher<trajectory_msgs::msg::JointTrajectory>("/arm_controller/joint_trajectory", 10);
 
+    scene_marker_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/scene_objects", 10);
+
     this->declare_parameter<std::string>("use_arm", "");
     std::string use_arm = this->get_parameter("use_arm").as_string();
 
@@ -487,12 +489,6 @@ void RRTNode::publishTCPPath(const std::vector<Eigen::Vector3d> &tcp_path)
 
 void RRTNode::sceneCommandCallback(const custom_msgs::msg::SceneCommand::SharedPtr msg)
 {
-    // if (planner_ == nullptr)
-    // {
-    //     RCLCPP_ERROR(this->get_logger(), "Planner is null in sceneCommandCallback!");
-    //     return;
-    // }
-
     using Cmd = custom_msgs::msg::SceneCommand;
 
     switch (msg->action)
@@ -554,6 +550,120 @@ void RRTNode::sceneCommandCallback(const custom_msgs::msg::SceneCommand::SharedP
     default:
         RCLCPP_WARN(get_logger(), "Unknown scene command action: %d", msg->action);
     }
+
+    publishSceneMarkers();
+}
+
+void RRTNode::publishSceneMarkers()
+{
+    auto objects = collision_checker_->getSceneObjects();
+
+    visualization_msgs::msg::MarkerArray marker_array;
+
+    // First publish a DELETE_ALL to clear old markers
+    visualization_msgs::msg::Marker delete_all;
+    delete_all.action = visualization_msgs::msg::Marker::DELETEALL;
+    delete_all.header.frame_id = "world";
+    delete_all.header.stamp = this->now();
+    marker_array.markers.push_back(delete_all);
+    scene_marker_pub_->publish(marker_array);
+    marker_array.markers.clear();
+
+    int id = 0;
+    for (const auto &obj : objects)
+    {
+        // Skip ground plane — it clutters the view
+        if (obj.name == "ground_plane")
+        {
+            ++id;
+            continue;
+        }
+
+        visualization_msgs::msg::Marker marker;
+        marker.header.frame_id = "world";
+        marker.header.stamp = this->now();
+        marker.ns = "scene_objects";
+        marker.id = id++;
+        marker.action = visualization_msgs::msg::Marker::ADD;
+
+        // ── Pose ──────────────────────────────────────────────────────────
+        marker.pose.position.x = obj.position.x();
+        marker.pose.position.y = obj.position.y();
+        marker.pose.position.z = obj.position.z();
+        marker.pose.orientation.x = obj.orientation.x();
+        marker.pose.orientation.y = obj.orientation.y();
+        marker.pose.orientation.z = obj.orientation.z();
+        marker.pose.orientation.w = obj.orientation.w();
+
+        // ── Color — semi-transparent red ──────────────────────────────────
+        marker.color.r = 1.0f;
+        marker.color.g = 0.2f;
+        marker.color.b = 0.2f;
+        marker.color.a = 0.6f;
+
+        // ── Shape + scale ─────────────────────────────────────────────────
+        if (obj.type == "sphere" && obj.dims.size() >= 1)
+        {
+            marker.type = visualization_msgs::msg::Marker::SPHERE;
+            double r = obj.dims[0];
+            marker.scale.x = r * 2.0;
+            marker.scale.y = r * 2.0;
+            marker.scale.z = r * 2.0;
+        }
+        else if (obj.type == "box" && obj.dims.size() >= 3)
+        {
+            marker.type = visualization_msgs::msg::Marker::CUBE;
+            marker.scale.x = obj.dims[0];
+            marker.scale.y = obj.dims[1];
+            marker.scale.z = obj.dims[2];
+        }
+        else if (obj.type == "cylinder" && obj.dims.size() >= 2)
+        {
+            marker.type = visualization_msgs::msg::Marker::CYLINDER;
+            marker.scale.x = obj.dims[0] * 2.0; // diameter
+            marker.scale.y = obj.dims[0] * 2.0;
+            marker.scale.z = obj.dims[1]; // full length
+        }
+        else if (obj.type == "capsule" && obj.dims.size() >= 2)
+        {
+            // RViz has no capsule — approximate with cylinder
+            marker.type = visualization_msgs::msg::Marker::CYLINDER;
+            marker.scale.x = obj.dims[0] * 2.0;
+            marker.scale.y = obj.dims[0] * 2.0;
+            marker.scale.z = obj.dims[1] + obj.dims[0] * 2.0; // shaft + caps
+        }
+        else if (obj.type == "cone" && obj.dims.size() >= 2)
+        {
+            // RViz has no cone — use a flattened sphere as fallback
+            // or use ARROW which looks cone-like
+            marker.type = visualization_msgs::msg::Marker::ARROW;
+            marker.scale.x = obj.dims[1];       // shaft length = height
+            marker.scale.y = obj.dims[0] * 2.0; // head diameter = base diameter
+            marker.scale.z = obj.dims[0] * 2.0;
+        }
+        else if (obj.type == "mesh" && obj.dims.size() >= 3)
+        {
+            // Show AABB as a cube for meshes
+            marker.type = visualization_msgs::msg::Marker::CUBE;
+            marker.scale.x = obj.dims[0];
+            marker.scale.y = obj.dims[1];
+            marker.scale.z = obj.dims[2];
+            marker.color.r = 0.2f;
+            marker.color.g = 0.6f;
+            marker.color.b = 1.0f;
+            marker.color.a = 0.5f;
+        }
+        else
+        {
+            continue; // skip unknown
+        }
+
+        marker_array.markers.push_back(marker);
+    }
+
+    scene_marker_pub_->publish(marker_array);
+    RCLCPP_INFO(this->get_logger(), "[Scene] Published %zu markers to RViz",
+                marker_array.markers.size());
 }
 
 int main(int argc, char **argv)

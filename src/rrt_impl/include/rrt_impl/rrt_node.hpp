@@ -41,6 +41,9 @@ private:
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr tcp_pub_;
     rclcpp::Publisher<trajectory_msgs::msg::JointTrajectory>::SharedPtr traj_pub_;
 
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr scene_marker_pub_;
+    void publishSceneMarkers();
+
     void goalCallback(const GoalCommand::SharedPtr msg);
     void publishTCPPath(const std::vector<Eigen::Vector3d> &tcp_path);
 

@@ -1,9 +1,9 @@
-# ONLY STYLE + RANDOM BUTTON ADDED — EVERYTHING ELSE SAME
+# ONLY STYLE + RANDOM BUTTON + DYNAMIC DIMENSIONS — EVERYTHING ELSE SAME
 
 import tkinter as tk
 from tkinter import ttk, messagebox
 import yaml
-import random   # ✅ added
+import random
 
 import rclpy
 from rclpy.node import Node
@@ -41,7 +41,7 @@ class RRTGui(Node):
         self.root.title(f"RRT GUI — {self.robot_name}")
         self.root.configure(bg="#ffffff")
 
-        # ================= LIGHT THEME =================
+        # ================= STYLE =================
         style = ttk.Style()
         style.theme_use("clam")
 
@@ -55,45 +55,22 @@ class RRTGui(Node):
                   background=[("selected", "#ffffff")])
 
         style.configure("TFrame", background="#ffffff")
-
-        style.configure("TLabel",
-                        background="#ffffff",
-                        foreground="#222222",
-                        font=("Arial", 10))
-
-        style.configure("TButton",
-                        background="#e6e6e6",
-                        foreground="#222222",
-                        font=("Arial", 10),
-                        borderwidth=0,
-                        padding=6)
-        style.map("TButton",
-                  background=[("active", "#d6d6d6")])
-
-        style.configure("TRadiobutton",
-                        background="#ffffff",
-                        foreground="#222222",
-                        font=("Arial", 10))
-
-        style.configure("TLabelframe",
-                        background="#ffffff",
-                        foreground="#333333",
-                        font=("Arial", 10, "bold"))
-
-        style.configure("TLabelframe.Label",
-                        background="#ffffff",
-                        foreground="#333333",
-                        font=("Arial", 10, "bold"))
-
-        style.configure("TSpinbox",
-                        fieldbackground="#ffffff",
-                        foreground="#222222",
-                        font=("Arial", 10))
-
-        style.configure("TCombobox",
-                        fieldbackground="#ffffff",
-                        foreground="#222222",
-                        font=("Arial", 10))
+        style.configure("TLabel", background="#ffffff",
+                        foreground="#222222", font=("Arial", 10))
+        style.configure("TButton", background="#e6e6e6",
+                        foreground="#222222", font=("Arial", 10),
+                        borderwidth=0, padding=6)
+        style.map("TButton", background=[("active", "#d6d6d6")])
+        style.configure("TRadiobutton", background="#ffffff",
+                        foreground="#222222", font=("Arial", 10))
+        style.configure("TLabelframe", background="#ffffff",
+                        foreground="#333333", font=("Arial", 10, "bold"))
+        style.configure("TLabelframe.Label", background="#ffffff",
+                        foreground="#333333", font=("Arial", 10, "bold"))
+        style.configure("TSpinbox", fieldbackground="#ffffff",
+                        foreground="#222222", font=("Arial", 10))
+        style.configure("TCombobox", fieldbackground="#ffffff",
+                        foreground="#222222", font=("Arial", 10))
 
         # ================= NOTEBOOK =================
         notebook = ttk.Notebook(self.root)
@@ -139,8 +116,8 @@ class RRTGui(Node):
 
         self.planner_var = tk.IntVar(value=GoalCommand.RRT_CONNECT)
         for text, val in [("RRT", GoalCommand.RRT),
-                           ("RRT*", GoalCommand.RRT_STAR),
-                           ("RRT-Connect", GoalCommand.RRT_CONNECT)]:
+                          ("RRT*", GoalCommand.RRT_STAR),
+                          ("RRT-Connect", GoalCommand.RRT_CONNECT)]:
             ttk.Radiobutton(planner_frame, text=text,
                             variable=self.planner_var, value=val).pack(side="left", padx=10, pady=5)
 
@@ -168,16 +145,12 @@ class RRTGui(Node):
                    command=self.set_home_position).pack(side="left", padx=5, pady=5)
         ttk.Button(preset_frame, text="Safe",
                    command=self.set_safe_position).pack(side="left", padx=5, pady=5)
-
-        # ✅ NEW RANDOM BUTTON
         ttk.Button(preset_frame, text="Random",
                    command=self.set_random_position).pack(side="left", padx=5, pady=5)
 
-    # ================= RANDOM FUNCTION =================
     def set_random_position(self):
         for i, s in enumerate(self.sliders):
-            val = random.uniform(self.lower[i], self.upper[i])
-            s.set(val)
+            s.set(random.uniform(self.lower[i], self.upper[i]))
 
     # ================= SCENE TAB =================
     def _build_scene_tab(self, parent):
@@ -188,9 +161,7 @@ class RRTGui(Node):
         name_frame.pack(fill="x", pady=4)
 
         self.obj_name_var = tk.StringVar(value="obstacle_1")
-        tk.Entry(name_frame, textvariable=self.obj_name_var,
-                 bg="#ffffff", fg="#222222", insertbackground="#222222",
-                 font=("Arial", 10), relief="solid", bd=1).pack(fill="x", padx=6, pady=4)
+        tk.Entry(name_frame, textvariable=self.obj_name_var).pack(fill="x", padx=6, pady=4)
 
         pose_frame = ttk.LabelFrame(left, text="Pose  (x y z qx qy qz qw)")
         pose_frame.pack(fill="x", pady=4)
@@ -202,23 +173,25 @@ class RRTGui(Node):
 
         for i, val in enumerate(defaults):
             v = tk.DoubleVar(value=val)
-            tk.Entry(pose_inner, textvariable=v, width=6,
-                     bg="#ffffff", fg="#222222",
-                     insertbackground="#222222",
-                     font=("Arial", 9), relief="solid", bd=1).grid(row=0, column=i, padx=2)
+            tk.Entry(pose_inner, textvariable=v, width=6).grid(row=0, column=i, padx=2)
             self.pose_vars.append(v)
 
         prim_frame = ttk.LabelFrame(left, text="Add Primitive")
         prim_frame.pack(fill="x", pady=4)
 
         self.prim_type_var = tk.StringVar(value="BOX")
-        ttk.Combobox(prim_frame, textvariable=self.prim_type_var,
-                     values=["SPHERE", "CYLINDER", "BOX", "CAPSULE", "CONE"],
-                     state="readonly").pack(padx=6, pady=4)
+
+        combo = ttk.Combobox(prim_frame, textvariable=self.prim_type_var,
+                             values=["SPHERE", "CYLINDER", "BOX", "CAPSULE", "CONE"],
+                             state="readonly")
+        combo.pack(padx=6, pady=4)
+        combo.bind("<<ComboboxSelected>>", self.on_primitive_change)
+
+        self.param_label = ttk.Label(prim_frame, text="Dimensions (x y z)")
+        self.param_label.pack()
 
         self.prim_params_var = tk.StringVar(value="1.0 0.8 0.02")
-        tk.Entry(prim_frame, textvariable=self.prim_params_var,
-                 bg="#ffffff", fg="#222222").pack(padx=6, pady=4)
+        tk.Entry(prim_frame, textvariable=self.prim_params_var).pack(padx=6, pady=4)
 
         ttk.Button(prim_frame, text="Add Primitive",
                    command=self.send_add_primitive).pack(pady=6)
@@ -226,17 +199,26 @@ class RRTGui(Node):
         right = ttk.Frame(parent)
         right.pack(side="right", fill="both", padx=10, pady=8)
 
-        self.obj_listbox = tk.Listbox(
-            right,
-            bg="#ffffff",
-            fg="#222222",
-            selectbackground="#cce5ff",
-            font=("Arial", 10)
-        )
+        self.obj_listbox = tk.Listbox(right)
         self.obj_listbox.pack(fill="both", expand=True)
 
         ttk.Button(right, text="Remove",
                    command=self.send_remove_object).pack(pady=3)
+
+    def on_primitive_change(self, event=None):
+        prim = self.prim_type_var.get()
+
+        if prim == "BOX":
+            self.param_label.config(text="Dimensions (x y z)")
+            self.prim_params_var.set("1.0 0.8 0.02")
+
+        elif prim == "SPHERE":
+            self.param_label.config(text="Radius")
+            self.prim_params_var.set("0.5")
+
+        else:
+            self.param_label.config(text="Radius Height")
+            self.prim_params_var.set("0.3 1.0")
 
     # ================= METHODS =================
     def _build_pose(self):
@@ -251,8 +233,24 @@ class RRTGui(Node):
         msg = SceneCommand()
         msg.action = SceneCommand.ADD_PRIMITIVE
         msg.primitive.name = self.obj_name_var.get()
-        msg.primitive.type = PrimitiveObject.BOX
-        msg.primitive.params = [1.0, 1.0, 1.0]
+
+        prim_map = {
+            "BOX": PrimitiveObject.BOX,
+            "SPHERE": PrimitiveObject.SPHERE,
+            "CYLINDER": PrimitiveObject.CYLINDER,
+            "CAPSULE": PrimitiveObject.CAPSULE,
+            "CONE": PrimitiveObject.CONE
+        }
+
+        msg.primitive.type = prim_map[self.prim_type_var.get()]
+
+        try:
+            params = list(map(float, self.prim_params_var.get().split()))
+        except:
+            messagebox.showerror("Error", "Invalid dimension format")
+            return
+
+        msg.primitive.params = params
         msg.primitive.pose = self._build_pose()
 
         self.scene_pub.publish(msg)
