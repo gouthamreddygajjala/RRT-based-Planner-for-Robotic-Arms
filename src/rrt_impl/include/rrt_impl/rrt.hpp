@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <stdexcept>
 
-#include "rrt_impl/check_collision.hpp"
+#include "rrt_impl/collision.hpp"
 #include "kd_tree.hpp"
 #include <geometry_msgs/msg/pose.hpp>
 
@@ -22,12 +22,16 @@ namespace rrt_core
         // std::vector<int> children;
     };
 
+    using PrimitiveType = collision::PrimitiveType;
+
     class RRT
     {
     public:
         virtual ~RRT() = default;
 
         explicit RRT(size_t dof, const std::string &urdf_path);
+
+        explicit RRT(size_t dof, std::shared_ptr<collision::CheckCollision> collision);
 
         void setStart(const std::vector<double> &q);
         void setGoal(const std::vector<double> &q);
@@ -82,13 +86,23 @@ namespace rrt_core
 
         double checkIK(const geometry_msgs::msg::Pose &pose, std::vector<double> &q_out);
 
-        KDTree kd_tree_;
+        void addPrimitive(const std::string &name, collision::PrimitiveType type,
+                          const std::vector<double> &params, const Eigen::Isometry3d &pose = Eigen::Isometry3d::Identity());
+
+        void addMesh(const std::string &name, const std::vector<Eigen::Vector3d> &vertices,
+                     const std::vector<std::array<int, 3>> &triangles, const Eigen::Isometry3d &pose = Eigen::Isometry3d::Identity());
+
+        void clearSceneObjects();
+        bool removeSceneObject(const std::string &name);
 
     private:
         std::mt19937 rng_;
 
-        collision::CheckCollision collision_checker_;
+        std::shared_ptr<collision::CheckCollision> collision_checker_;
         std::vector<Eigen::Vector3d> tcp_points;
+
+    public:
+        KDTree kd_tree_;
     };
 
 } // namespace rrt_core

@@ -14,6 +14,11 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 #include "custom_msgs/msg/goal_command.hpp"
+
+#include "custom_msgs/msg/scene_command.hpp"
+#include "custom_msgs/msg/primitive_object.hpp"
+#include "custom_msgs/msg/mesh_object.hpp"
+
 #include <chrono>
 
 #include "ruckig.hpp"
@@ -31,6 +36,7 @@ private:
     void run(uint8_t planner_type);
 
     rclcpp::Subscription<GoalCommand>::SharedPtr goal_sub_;
+    rclcpp::Subscription<custom_msgs::msg::SceneCommand>::SharedPtr scene_sub_;
     rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_state_sub_;
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr tcp_pub_;
     rclcpp::Publisher<trajectory_msgs::msg::JointTrajectory>::SharedPtr traj_pub_;
@@ -40,8 +46,9 @@ private:
 
     void publishTrajectory(const std::vector<std::vector<double>> &path);
 
-    void testIK();
+    void sceneCommandCallback(const custom_msgs::msg::SceneCommand::SharedPtr msg);
 
+    void testIK();
 
     // --- RRT Core ---
 

@@ -6,6 +6,9 @@ RRTNode::RRTNode() : Node("rrt_node")
 
     goal_sub_ = this->create_subscription<GoalCommand>("/goal_command", 10, std::bind(&RRTNode::goalCallback, this, std::placeholders::_1));
 
+    scene_sub_ = create_subscription<custom_msgs::msg::SceneCommand>("/scene_command", 10,
+                                                                     std::bind(&RRTNode::sceneCommandCallback, this, std::placeholders::_1));
+
     tcp_pub_ = this->create_publisher<visualization_msgs::msg::Marker>("/rrt_path", 10);
     traj_pub_ = this->create_publisher<trajectory_msgs::msg::JointTrajectory>("/arm_controller/joint_trajectory", 10);
 
@@ -81,6 +84,8 @@ RRTNode::RRTNode() : Node("rrt_node")
 
     dof_ = dof;
 
+    collision_checker_ = std::make_shared<collision::CheckCollision>(urdf_);
+
     // rrt_ = std::make_shared<rrt_core::RRT>(dof, urdf);
 
     // rrt_->setJointLimits(lower_limits_, upper_limits_);
@@ -115,7 +120,7 @@ void RRTNode::run(uint8_t planner_type)
         if (!rrt_) // construct only once
         {
             // RCLCPP_INFO(this->get_logger(), "Initializing RRT planner...");
-            rrt_ = std::make_shared<rrt_core::RRT>(dof_, urdf_);
+            rrt_ = std::make_shared<rrt_core::RRT>(dof_, collision_checker_);
             rrt_->setJointLimits(lower_limits_, upper_limits_);
             rrt_->setStepSize(step_size);
             rrt_->setGoalBias(goal_bias);
@@ -130,7 +135,7 @@ void RRTNode::run(uint8_t planner_type)
         if (!rrt_star_) // construct only once
         {
             // RCLCPP_INFO(this->get_logger(), "Initializing RRT* planner...");
-            rrt_star_ = std::make_shared<rrt_core::RRTStar>(dof_, urdf_);
+            rrt_star_ = std::make_shared<rrt_core::RRTStar>(dof_, collision_checker_);
             rrt_star_->setJointLimits(lower_limits_, upper_limits_);
             rrt_star_->setStepSize(step_size);
             rrt_star_->setGoalBias(goal_bias);
@@ -145,7 +150,7 @@ void RRTNode::run(uint8_t planner_type)
         if (!rrt_connect_) // construct only once
         {
             // RCLCPP_INFO(this->get_logger(), "Initializing RRT-Connect planner...");
-            rrt_connect_ = std::make_shared<rrt_core::RRTConnect>(dof_, urdf_);
+            rrt_connect_ = std::make_shared<rrt_core::RRTConnect>(dof_, collision_checker_);
             rrt_connect_->setJointLimits(lower_limits_, upper_limits_);
             rrt_connect_->setStepSize(step_size);
             rrt_connect_->setGoalBias(goal_bias);
@@ -161,7 +166,7 @@ void RRTNode::run(uint8_t planner_type)
 
         if (!rrt_)
         {
-            rrt_ = std::make_shared<rrt_core::RRT>(dof_, urdf_);
+            rrt_ = std::make_shared<rrt_core::RRT>(dof_, collision_checker_);
             rrt_->setJointLimits(lower_limits_, upper_limits_);
             rrt_->setStepSize(step_size);
             rrt_->setGoalBias(goal_bias);
@@ -198,11 +203,11 @@ void RRTNode::run(uint8_t planner_type)
 
     if (success)
     {
-        std::cout << "planner_: " << planner_.get() << std::endl;
-        std::cout << "rrt_: " << rrt_.get() << std::endl;
-        std::cout << "rrt_star_: " << rrt_star_.get() << std::endl;
-        std::cout << "rrt_connect_: " << rrt_connect_.get() << std::endl;
-        
+        // std::cout << "planner_: " << planner_.get() << std::endl;
+        // std::cout << "rrt_: " << rrt_.get() << std::endl;
+        // std::cout << "rrt_star_: " << rrt_star_.get() << std::endl;
+        // std::cout << "rrt_connect_: " << rrt_connect_.get() << std::endl;
+
         RCLCPP_INFO(this->get_logger(), "Path found!");
 
         path_ = planner_->getPath();
@@ -246,7 +251,7 @@ void RRTNode::run(uint8_t planner_type)
 
     publishTrajectory(path_);
 
-    double length = planner_->computePathLength(path_, tcp_path);
+    double length = collision_checker_->computeCartesianPathLength(path_, tcp_path);
     publishTCPPath(tcp_path);
 
     RCLCPP_INFO(this->get_logger(), "Cartesian path length: %.4f meters, Planning time: %.3f ms", length, duration_ms);
@@ -266,7 +271,7 @@ void RRTNode::testIK()
 
     std::vector<double> q_ik;
 
-    if (rrt_->checkIK(test_pose, q_ik))
+    if (collision_checker_->getIK(test_pose, q_ik))
     {
         RCLCPP_INFO(this->get_logger(), "IK solution found:");
         for (size_t i = 0; i < q_ik.size(); ++i)
@@ -311,7 +316,7 @@ void RRTNode::publishTrajectory(const std::vector<std::vector<double>> &path)
         return;
     }
 
-    double total_length = planner_->computePathLength(path, tcp_path_local);
+    double total_length = collision_checker_->computeCartesianPathLength(path, tcp_path_local);
     if (total_length <= 1e-6)
     {
         RCLCPP_WARN(this->get_logger(), "Path length too small.");
@@ -380,11 +385,9 @@ void RRTNode::publishTrajectory(const std::vector<std::vector<double>> &path)
 
         if (i > 0)
         {
-            double segment_length =
-                (clean_tcp[i] - clean_tcp[i - 1]).norm();
+            double segment_length = (clean_tcp[i] - clean_tcp[i - 1]).norm();
 
-            double segment_time =
-                (segment_length / std::max(clean_length, 1e-6)) * total_time;
+            double segment_time = (segment_length / std::max(clean_length, 1e-6)) * total_time;
 
             // 🔥 Critical fix
             segment_time = std::max(segment_time, min_dt);
@@ -398,8 +401,7 @@ void RRTNode::publishTrajectory(const std::vector<std::vector<double>> &path)
             accumulated_time = std::max(accumulated_time, total_time);
         }
 
-        point.time_from_start =
-            rclcpp::Duration::from_seconds(accumulated_time);
+        point.time_from_start = rclcpp::Duration::from_seconds(accumulated_time);
 
         traj.points.push_back(point);
     }
@@ -481,6 +483,77 @@ void RRTNode::publishTCPPath(const std::vector<Eigen::Vector3d> &tcp_path)
     }
 
     tcp_pub_->publish(line);
+}
+
+void RRTNode::sceneCommandCallback(const custom_msgs::msg::SceneCommand::SharedPtr msg)
+{
+    // if (planner_ == nullptr)
+    // {
+    //     RCLCPP_ERROR(this->get_logger(), "Planner is null in sceneCommandCallback!");
+    //     return;
+    // }
+
+    using Cmd = custom_msgs::msg::SceneCommand;
+
+    switch (msg->action)
+    {
+    case Cmd::ADD_PRIMITIVE:
+    {
+        const auto &p = msg->primitive;
+
+        Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+        pose.translation() = Eigen::Vector3d(p.pose.position.x,
+                                             p.pose.position.y,
+                                             p.pose.position.z);
+        Eigen::Quaterniond q(p.pose.orientation.w,
+                             p.pose.orientation.x,
+                             p.pose.orientation.y,
+                             p.pose.orientation.z);
+        pose.linear() = q.toRotationMatrix();
+
+        collision_checker_->addPrimitive(p.name,
+                                         static_cast<collision::PrimitiveType>(p.type),
+                                         std::vector<double>(p.params.begin(), p.params.end()),
+                                         pose);
+        break;
+    }
+    case Cmd::ADD_MESH:
+    {
+        const auto &m = msg->mesh;
+
+        std::vector<Eigen::Vector3d> verts;
+        for (const auto &pt : m.vertices)
+            verts.emplace_back(pt.x, pt.y, pt.z);
+
+        // unflatten: [v0,v1,v2, v0,v1,v2, ...]
+        std::vector<std::array<int, 3>> tris;
+        for (size_t i = 0; i + 2 < m.triangles.size(); i += 3)
+            tris.push_back({m.triangles[i], m.triangles[i + 1], m.triangles[i + 2]});
+
+        Eigen::Isometry3d pose = Eigen::Isometry3d::Identity();
+        pose.translation() = Eigen::Vector3d(m.pose.position.x,
+                                             m.pose.position.y,
+                                             m.pose.position.z);
+        Eigen::Quaterniond q(m.pose.orientation.w,
+                             m.pose.orientation.x,
+                             m.pose.orientation.y,
+                             m.pose.orientation.z);
+        pose.linear() = q.toRotationMatrix();
+
+        collision_checker_->addMesh(m.name, verts, tris, pose);
+        break;
+    }
+    case Cmd::REMOVE:
+        collision_checker_->removeSceneObject(msg->remove_name);
+        break;
+
+    case Cmd::CLEAR:
+        collision_checker_->clearSceneObjects();
+        break;
+
+    default:
+        RCLCPP_WARN(get_logger(), "Unknown scene command action: %d", msg->action);
+    }
 }
 
 int main(int argc, char **argv)

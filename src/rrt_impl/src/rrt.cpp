@@ -2,11 +2,16 @@
 
 namespace rrt_core
 {
-    RRT::RRT(size_t dof, const std::string &urdf_path) : dof_(dof), collision_checker_(urdf_path), kd_tree_(dof)
+    RRT::RRT(size_t dof, const std::string &urdf_path) : dof_(dof), collision_checker_(std::make_shared<collision::CheckCollision>(urdf_path)), kd_tree_(dof)
     {
         std::random_device rd;
         rng_ = std::mt19937(rd());
         std::cout << "RRT Constructed with DOF: " << dof_ << std::endl;
+    }
+
+    RRT::RRT(size_t dof, std::shared_ptr<collision::CheckCollision> collision) : dof_(dof), collision_checker_(collision), kd_tree_(dof)
+    {
+        rng_.seed(std::random_device{}());
     }
 
     void RRT::setStart(const std::vector<double> &q)
@@ -381,19 +386,19 @@ namespace rrt_core
         return path;
     }
 
-    double RRT::computePathLength(const std::vector<std::vector<double>> &path, std::vector<Eigen::Vector3d> &tcp_points) 
-    {
-        return collision_checker_.computeCartesianPathLength(path, tcp_points);
-    }
+    // double RRT::computePathLength(const std::vector<std::vector<double>> &path, std::vector<Eigen::Vector3d> &tcp_points)
+    // {
+    //     return collision_checker_->computeCartesianPathLength(path, tcp_points);
+    // }
 
-    double RRT::checkIK(const geometry_msgs::msg::Pose &pose, std::vector<double> &q_out)
-    {
-        return collision_checker_.getIK(pose, q_out);
-    }
+    // double RRT::checkIK(const geometry_msgs::msg::Pose &pose, std::vector<double> &q_out)
+    // {
+    //     return collision_checker_->getIK(pose, q_out);
+    // }
 
     bool RRT::isCollisionFree(const std::vector<double> &q) const
     {
-        if (collision_checker_.isStateValid(q))
+        if (collision_checker_->isStateValid(q))
         {
             // std::cout << "State is valid" << std::endl;
         }
@@ -401,8 +406,29 @@ namespace rrt_core
         {
             std::cout << "State is in collision" << std::endl;
         }
-        return collision_checker_.isStateValid(q);
+        return collision_checker_->isStateValid(q);
     }
 
+    // void RRT::addPrimitive(const std::string &name, collision::PrimitiveType type,
+    //                        const std::vector<double> &params, const Eigen::Isometry3d &pose)
+    // {
+    //     collision_checker_->addPrimitive(name, type, params, pose);
+    // }
+
+    // void RRT::addMesh(const std::string &name, const std::vector<Eigen::Vector3d> &vertices,
+    //                   const std::vector<std::array<int, 3>> &triangles, const Eigen::Isometry3d &pose)
+    // {
+    //     collision_checker_->addMesh(name, vertices, triangles, pose);
+    // }
+
+    // bool RRT::removeSceneObject(const std::string &name)
+    // {
+    //     return collision_checker_->removeSceneObject(name);
+    // }
+
+    // void RRT::clearSceneObjects()
+    // {
+    //     collision_checker_->clearSceneObjects();
+    // }
 
 } // namespace rrt_core

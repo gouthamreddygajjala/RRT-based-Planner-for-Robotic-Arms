@@ -5,7 +5,6 @@
 namespace rrt_core
 {
 
-    // ================= CONSTRUCTOR =================
     RRTConnect::RRTConnect(size_t dof, const std::string &urdf_path)
         : RRT(dof, urdf_path)
     {
@@ -15,7 +14,15 @@ namespace rrt_core
         goal_bias_ = 0.0;
     }
 
-    // ================= EXTEND =================
+    RRTConnect::RRTConnect(size_t dof, std::shared_ptr<collision::CheckCollision> collision)
+        : RRT(dof, collision)
+    {
+        std::cout << "RRT-Connect Constructed with DOF: " << dof_ << std::endl;
+
+        // RRT-Connect works best without goal bias
+        goal_bias_ = 0.0;
+    }
+
     RRTConnect::ExtendStatus RRTConnect::extend(Tree &tree,
                                                 const std::vector<double> &q_target,
                                                 int &new_idx)
@@ -39,7 +46,6 @@ namespace rrt_core
         return ExtendStatus::ADVANCED;
     }
 
-    // ================= CONNECT (GREEDY) =================
     RRTConnect::ExtendStatus RRTConnect::connect(Tree &tree,
                                                  const std::vector<double> &q_target,
                                                  int &new_idx)
@@ -54,7 +60,6 @@ namespace rrt_core
         return status;
     }
 
-    // ================= MAIN PLANNER =================
     bool RRTConnect::plan(int max_iter)
     {
         std::cout << "[RRT-Connect] Planner parameters:" << std::endl;
@@ -123,7 +128,7 @@ namespace rrt_core
 
     // ================= PATH MERGE =================
     void RRTConnect::buildFinalPath(Tree &Ta, int idxA,
-                                   Tree &Tb, int idxB)
+                                    Tree &Tb, int idxB)
     {
         std::vector<std::vector<double>> pathA, pathB;
 

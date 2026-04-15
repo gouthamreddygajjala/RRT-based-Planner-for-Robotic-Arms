@@ -10,6 +10,9 @@ namespace rrt_core
     public:
         explicit RRTConnect(size_t dof, const std::string &urdf_path);
 
+        explicit RRTConnect(size_t dof, std::shared_ptr<collision::CheckCollision> collision);  
+
+
         // Main planner
         bool plan(int max_iter) override;
 

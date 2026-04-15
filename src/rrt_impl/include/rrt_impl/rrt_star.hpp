@@ -11,6 +11,9 @@ namespace rrt_core
     public:
         RRTStar(size_t dof, const std::string &urdf_path);
 
+        RRTStar(size_t dof, std::shared_ptr<collision::CheckCollision> collision);  
+
+
         void setRewireRadius(double r);
         bool plan(int max_iter) override;
 

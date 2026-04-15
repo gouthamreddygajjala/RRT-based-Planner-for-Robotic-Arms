@@ -13,6 +13,12 @@ namespace rrt_core
         std::cout << "RRT* Constructed with DOF: " << dof_ << std::endl;
     }
 
+    RRTStar::RRTStar(size_t dof, std::shared_ptr<collision::CheckCollision> collision)
+        : RRT(dof, collision) // delegate to base class
+    {
+        std::cout << "RRT* Constructed with DOF: " << dof_ << std::endl;
+    }
+
     void RRTStar::setRewireRadius(double r)
     {
         rewire_radius_ = r;
