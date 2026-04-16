@@ -33,7 +33,7 @@ namespace collision
         CYLINDER, // params: [radius, full_length]
         BOX,      // params: [lx, ly, lz]
         CAPSULE,  // params: [radius, full_shaft_length]
-        CONE,      // params: [radius, full_height]
+        CONE,     // params: [radius, full_height]
         MESH      // params: [ignored, use actual mesh data]
     };
 
@@ -43,10 +43,12 @@ namespace collision
         struct SceneObjectInfo
         {
             std::string name;
-            PrimitiveType type;           // "sphere", "box", "cylinder", "capsule", "cone", "mesh", "unknown"
+            PrimitiveType type;         // "sphere", "box", "cylinder", "capsule", "cone", "mesh", "unknown"
             std::vector<double> params; // shape-specific dimensions (full lengths, not half)
             Eigen::Vector3d position;
             Eigen::Quaterniond orientation;
+
+            std::shared_ptr<coal::CollisionGeometry> mesh_geom;
         };
 
         explicit CheckCollision(const std::string &urdf_path);
@@ -89,6 +91,6 @@ namespace collision
         void registerSceneGeometry(const std::string &name, PrimitiveType type,
                                    const std::vector<double> &params, const Eigen::Isometry3d &pose);
 
-            void rebuildGeomModel();
+        void rebuildGeomModel();
     };
 }

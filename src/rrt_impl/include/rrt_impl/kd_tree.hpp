@@ -25,10 +25,8 @@ namespace rrt_core
             root_ = insert(std::move(root_), q, node_index, 0);
         }
 
-        std::unique_ptr<KDNode> insert(std::unique_ptr<KDNode> node,
-                                       const std::vector<double> &q,
-                                       int node_index,
-                                       int depth)
+        std::unique_ptr<KDNode> insert(std::unique_ptr<KDNode> node, const std::vector<double> &q,
+                                       int node_index, int depth)
         {
             if (!node)
             {
@@ -78,11 +76,7 @@ namespace rrt_core
         std::unique_ptr<KDNode> root_;
 
         // ================= NEAREST HELPER =================
-        void nearest(const KDNode *node,
-                     const std::vector<double> &q,
-                     int depth,
-                     double &best_dist,
-                     int &best_index) const
+        void nearest(const KDNode *node, const std::vector<double> &q, int depth, double &best_dist, int &best_index) const
         {
             if (!node)
                 return;
@@ -108,11 +102,8 @@ namespace rrt_core
         }
 
         // ================= RADIUS HELPER =================
-        void radiusSearch(const KDNode *node,
-                          const std::vector<double> &q,
-                          double radius_sq,
-                          int depth,
-                          std::vector<int> &result) const
+        void radiusSearch(const KDNode *node, const std::vector<double> &q,
+                          double radius_sq, int depth, std::vector<int> &result) const
         {
             if (!node)
                 return;
@@ -141,14 +132,12 @@ namespace rrt_core
         }
 
         // ================= DISTANCE =================
-        double euclidean(const std::vector<double> &a,
-                         const std::vector<double> &b) const
+        double euclidean(const std::vector<double> &a, const std::vector<double> &b) const
         {
             return std::sqrt(squaredDistance(a, b));
         }
 
-        double squaredDistance(const std::vector<double> &a,
-                               const std::vector<double> &b) const
+        double squaredDistance(const std::vector<double> &a, const std::vector<double> &b) const
         {
             double sum = 0.0;
             for (size_t i = 0; i < dof_; ++i)

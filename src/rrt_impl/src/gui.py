@@ -1,4 +1,5 @@
 # ONLY STYLE + RANDOM BUTTON + SEPARATE PARAM FIELDS — EVERYTHING ELSE SAME
+# UPDATED: Planner + Scene in SAME WINDOW (no tabs)
 
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -45,15 +46,6 @@ class RRTGui(Node):
         style = ttk.Style()
         style.theme_use("clam")
 
-        style.configure("TNotebook", background="#ffffff", borderwidth=0)
-        style.configure("TNotebook.Tab",
-                        background="#e6e6e6",
-                        foreground="#222222",
-                        padding=[10, 4],
-                        font=("Arial", 10))
-        style.map("TNotebook.Tab",
-                  background=[("selected", "#ffffff")])
-
         style.configure("TFrame", background="#ffffff")
         style.configure("TLabel", background="#ffffff",
                         foreground="#222222", font=("Arial", 10))
@@ -72,17 +64,17 @@ class RRTGui(Node):
         style.configure("TCombobox", fieldbackground="#ffffff",
                         foreground="#222222", font=("Arial", 10))
 
-        # ================= NOTEBOOK =================
-        notebook = ttk.Notebook(self.root)
-        notebook.pack(fill="both", expand=True, padx=10, pady=10)
+        # ================= MAIN SPLIT =================
+        main_frame = ttk.Frame(self.root)
+        main_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        planner_tab = ttk.Frame(notebook)
-        notebook.add(planner_tab, text="  Planner  ")
-        self._build_planner_tab(planner_tab)
+        planner_frame = ttk.Frame(main_frame)
+        planner_frame.pack(side="left", fill="both", expand=True, padx=5)
+        self._build_planner_tab(planner_frame)
 
-        scene_tab = ttk.Frame(notebook)
-        notebook.add(scene_tab, text="  Scene Objects  ")
-        self._build_scene_tab(scene_tab)
+        scene_frame = ttk.Frame(main_frame)
+        scene_frame.pack(side="right", fill="both", expand=True, padx=5)
+        self._build_scene_tab(scene_frame)
 
         self.root.after(100, self.spin_ros)
 
@@ -195,7 +187,6 @@ class RRTGui(Node):
         self.param_label = ttk.Label(prim_frame, text="Dimensions (x y z)")
         self.param_label.pack()
 
-        # ===== NEW PARAM FIELDS =====
         self.param_container = ttk.Frame(prim_frame)
         self.param_container.pack(pady=4)
 
@@ -220,7 +211,6 @@ class RRTGui(Node):
         ttk.Button(right, text="Remove",
                    command=self.send_remove_object).pack(pady=3)
 
-    # ===== NEW FUNCTION =====
     def build_param_fields(self, prim_type):
         for widget in self.param_container.winfo_children():
             widget.destroy()
@@ -269,7 +259,6 @@ class RRTGui(Node):
 
         self.build_param_fields(prim)
 
-    # ================= METHODS =================
     def _build_pose(self):
         vals = [v.get() for v in self.pose_vars]
         p = Pose()
