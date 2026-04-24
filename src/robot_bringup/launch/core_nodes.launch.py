@@ -44,12 +44,18 @@ def generate_launch_description():
             arguments=["arm_controller", "-c", "/controller_manager"],
             )
     
+    arm_velocity_controller_spawner = Node(
+            package="controller_manager",
+            executable="spawner",
+            arguments=["arm_velocity_controller", "-c", "/controller_manager"],
+            )
+    
 
    
     nodes = [
             joint_state_broadcaster_spawner,
             arm_controller_spawner,
-
+            #arm_velocity_controller_spawner
     ]
 
     return LaunchDescription(nodes)

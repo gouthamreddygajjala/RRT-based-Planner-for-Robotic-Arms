@@ -1,4 +1,0 @@
-[INFO] [1775798944.399348955] [spawner_joint_state_broadcaster]: [94mLoaded [1mjoint_state_broadcaster[0m
-[WARN] [1775798954.404469752] [spawner_joint_state_broadcaster]: Failed getting a result from calling /controller_manager/switch_controller in 10.0. (Attempt 1 of 3.)
-[WARN] [1775798964.405007337] [spawner_joint_state_broadcaster]: Failed getting a result from calling /controller_manager/switch_controller in 10.0. (Attempt 2 of 3.)
-[ERROR] [1775798964.405680251] [spawner_joint_state_broadcaster]: [91mFailed to activate controller : joint_state_broadcaster[0m

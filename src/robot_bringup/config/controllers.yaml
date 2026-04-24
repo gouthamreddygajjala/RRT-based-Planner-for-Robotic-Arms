@@ -5,6 +5,9 @@ controller_manager:
     arm_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
+    arm_velocity_controller:
+      type: velocity_controllers/JointGroupVelocityController
+
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
 
@@ -47,3 +50,15 @@ arm_controller:
       panda_joint6: {p: 50.0}
       panda_joint7: {p: 30.0}
 
+arm_velocity_controller:
+  ros__parameters:
+    joints:
+      - panda_joint1
+      - panda_joint2
+      - panda_joint3
+      - panda_joint4
+      - panda_joint5
+      - panda_joint6
+      - panda_joint7
+
+    interface_name: velocity

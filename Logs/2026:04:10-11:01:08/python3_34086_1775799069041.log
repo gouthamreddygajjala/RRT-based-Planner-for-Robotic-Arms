@@ -1,3 +1,0 @@
-[INFO] [1775799069.092212181] [spawner_arm_controller]: waiting for service /controller_manager/list_controllers to become available...
-[INFO] [1775799070.363003056] [spawner_arm_controller]: [94mLoaded [1marm_controller[0m
-[INFO] [1775799070.376794868] [spawner_arm_controller]: [92mConfigured and activated [1marm_controller[0m
