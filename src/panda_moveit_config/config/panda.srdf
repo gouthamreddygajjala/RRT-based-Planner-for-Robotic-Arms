@@ -10,7 +10,22 @@
     <!--CHAINS: When a chain is specified, all the links along the chain (including endpoints) are included in the group. Additionally, all the joints that are parents to included links are also included. This means that joints along the chain and the parent joint of the base link are included in the group-->
     <!--SUBGROUPS: Groups can also be formed by referencing to already defined group names-->
     <group name="panda_arm">
-        <chain base_link="panda_link0" tip_link="panda_link8"/>
+        <link name="panda_link0"/>
+        <link name="panda_link1"/>
+        <link name="panda_link2"/>
+        <link name="panda_link3"/>
+        <link name="panda_link4"/>
+        <link name="panda_link5"/>
+        <link name="panda_link6"/>
+        <link name="panda_link7"/>
+        <link name="panda_link8"/>
+        <joint name="panda_joint1"/>
+        <joint name="panda_joint2"/>
+        <joint name="panda_joint3"/>
+        <joint name="panda_joint4"/>
+        <joint name="panda_joint5"/>
+        <joint name="panda_joint6"/>
+        <joint name="panda_joint7"/>
     </group>
     <!--DISABLE COLLISIONS: By default it is assumed that any link of the robot could potentially come into collision with any other link in the robot. This tag disables collision checking between a specified pair of links. -->
     <disable_collisions link1="panda_hand" link2="panda_leftfinger" reason="Adjacent"/>
